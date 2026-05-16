@@ -1,0 +1,14 @@
+/// A basic umi program, not sure yet how I'll even set up printing so that's not inlcuded here either
+
+struct SomeStruct {
+    foo: f32,
+    bar: i16,
+};
+
+fn main() -> void {
+    // Type inference, strings are a []u8
+    let a = "hello world\n";
+
+    // Also can explicitly set types
+    let mut b: usize = 10;
+}
