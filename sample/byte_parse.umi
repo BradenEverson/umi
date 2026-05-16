@@ -1,0 +1,26 @@
+/// Little sample program testing the byte parsing automatic feature :)
+
+enum PacketCode(u8) {
+    nop(0x00),
+    left(0x01),
+    right(0x02),
+    angle(0x04),
+}
+
+struct Packet {
+    code: PacketCode,
+    payload: []u8,
+}
+
+fn main() -> void {
+    let alloc = std::C_ALLOC;
+
+    let bytes: []u8 = {
+        0x01,                  // Code: Left 
+        0x00, 0x04,            // Len: 4 byte payload following
+        0x00, 0x00, 0x00, 0x0F // Some payload
+    };
+
+    let packet = Packet::from_bytes(alloc, bytes);
+    defer packet.deinit(alloc);
+}
