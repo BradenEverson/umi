@@ -1,4 +1,4 @@
-/// A basic umi program, not sure yet how I'll even set up printing so that's not inlcuded here either
+/// A basic umi program
 
 struct SomeStruct {
     foo: f32,
@@ -11,4 +11,6 @@ fn main() -> void {
 
     // Also can explicitly set types
     let mut b: usize = 10;
+
+    print("Hello!\n");
 }
