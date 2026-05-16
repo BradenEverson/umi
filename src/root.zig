@@ -2,3 +2,7 @@
 
 const std = @import("std");
 const Io = std.Io;
+
+test {
+    _ = @import("tokenizer.zig");
+}
