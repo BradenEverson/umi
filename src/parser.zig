@@ -222,7 +222,18 @@ pub fn parse(
 
                 // Start parsing out the parameters
                 while (self.peek() != .close_paren) {
-                    // TODO: parameters as name: type pairs
+                    const param_name = self.peekTok().data;
+                    try self.consume(.ident);
+
+                    try self.consume(.colon);
+
+                    const param_ty = self.peekTok().data;
+                    try self.consume(.ident);
+
+                    const param_type = tl.types.get(param_ty) orelse
+                        return ParserError.InvalidType;
+
+                    try func.parameters.put(alloc, param_name, param_type);
                 }
                 try self.consume(.close_paren);
 
