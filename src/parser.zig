@@ -9,10 +9,19 @@ const TokenTag = tokenizer.TokenTag;
 
 pub const Expr = union(enum) {
     assignment: struct { name: []const u8, val: *Expr },
-    binary_op: struct { left: *Expr, op: BinaryOp, right: *Expr },
-    unary_op: struct { op: tokenizer.Keyword, expr: *Expr },
     literal: Literal,
     variable: []const u8,
+
+    binary_op: struct {
+        left: *Expr,
+        op: BinaryOp,
+        right: *Expr,
+    },
+
+    unary_op: struct {
+        op: tokenizer.Keyword,
+        expr: *Expr,
+    },
 
     /// Deinits while assuming child expressions are also allocated
     /// with the same allocator, destroys them.
@@ -77,7 +86,9 @@ pub const Ast = struct {
     }
 };
 
-const AnyParserError = ParserError || std.mem.Allocator.Error || std.fmt.ParseIntError;
+const AnyParserError = ParserError ||
+    std.mem.Allocator.Error ||
+    std.fmt.ParseIntError;
 
 tokens: []const Token,
 cursor: usize = 0,
@@ -124,20 +135,30 @@ fn at_end(self: *Parser) bool {
     return self.peek() == .eof;
 }
 
-pub fn parse(self: *Parser, alloc: Allocator, ast: *Ast) AnyParserError!void {
+pub fn parse(
+    self: *Parser,
+    alloc: Allocator,
+    ast: *Ast,
+) AnyParserError!void {
     while (!self.at_end()) {
         const expr = try self.statement(alloc);
         try ast.ast.append(alloc, expr);
     }
 }
 
-pub fn statement(self: *Parser, alloc: Allocator) AnyParserError!*Expr {
+pub fn statement(
+    self: *Parser,
+    alloc: Allocator,
+) AnyParserError!*Expr {
     const expr = try self.expression(alloc);
     try self.consume(.semicolon);
     return expr;
 }
 
-pub fn expression(self: *Parser, alloc: Allocator) AnyParserError!*Expr {
+pub fn expression(
+    self: *Parser,
+    alloc: Allocator,
+) AnyParserError!*Expr {
     if (self.peek() == .ident and self.peek_n(1) == .equals) {
         const name = self.tokens[self.cursor].data;
         self.advance();
@@ -158,10 +179,15 @@ pub fn expression(self: *Parser, alloc: Allocator) AnyParserError!*Expr {
     return self.term(alloc);
 }
 
-fn term(self: *Parser, alloc: Allocator) !*Expr {
+fn term(
+    self: *Parser,
+    alloc: Allocator,
+) !*Expr {
     var left = try self.comparison(alloc);
 
-    while (self.peek() == .plus or self.peek() == .minus) {
+    while (self.peek() == .plus or
+        self.peek() == .minus)
+    {
         const op_token = self.tokens[self.cursor];
         self.advance();
         const right = try self.comparison(alloc);
@@ -186,10 +212,16 @@ fn term(self: *Parser, alloc: Allocator) !*Expr {
     return left;
 }
 
-fn comparison(self: *Parser, alloc: Allocator) AnyParserError!*Expr {
+fn comparison(
+    self: *Parser,
+    alloc: Allocator,
+) AnyParserError!*Expr {
     var left = try self.factor(alloc);
 
-    if (self.peek() == .gt or self.peek() == .lt or self.peek() == .equals_equals) {
+    if (self.peek() == .gt or
+        self.peek() == .lt or
+        self.peek() == .equals_equals)
+    {
         const op_token = self.tokens[self.cursor];
         self.advance();
         const right = try self.factor(alloc);
@@ -215,10 +247,16 @@ fn comparison(self: *Parser, alloc: Allocator) AnyParserError!*Expr {
     return left;
 }
 
-fn factor(self: *Parser, alloc: Allocator) AnyParserError!*Expr {
+fn factor(
+    self: *Parser,
+    alloc: Allocator,
+) AnyParserError!*Expr {
     var left = try self.power(alloc);
 
-    while (self.peek() == .star or self.peek() == .slash or self.peek() == .at) {
+    while (self.peek() == .star or
+        self.peek() == .slash or
+        self.peek() == .at)
+    {
         const op_token = self.tokens[self.cursor];
         self.advance();
         const right = try self.power(alloc);
@@ -243,12 +281,18 @@ fn factor(self: *Parser, alloc: Allocator) AnyParserError!*Expr {
     return left;
 }
 
-fn power(self: *Parser, alloc: Allocator) AnyParserError!*Expr {
+fn power(
+    self: *Parser,
+    alloc: Allocator,
+) AnyParserError!*Expr {
     const left = try self.primary(alloc);
     return left;
 }
 
-fn primary(self: *Parser, alloc: Allocator) AnyParserError!*Expr {
+fn primary(
+    self: *Parser,
+    alloc: Allocator,
+) AnyParserError!*Expr {
     const current_token = self.tokens[self.cursor];
     var expr: *Expr = undefined;
 
@@ -275,7 +319,10 @@ fn primary(self: *Parser, alloc: Allocator) AnyParserError!*Expr {
     return expr;
 }
 
-fn literal(self: *Parser, alloc: Allocator) AnyParserError!*Expr {
+fn literal(
+    self: *Parser,
+    alloc: Allocator,
+) AnyParserError!*Expr {
     const current_token = self.tokens[self.cursor];
     self.advance();
 
