@@ -14,7 +14,9 @@ pub const Expr = union(enum) {
     literal: Literal,
     variable: []const u8,
 
-    /// Deinits while assuming child expressions are also allocated with the same allocator, destroys them.
+    /// Deinits while assuming child expressions are also allocated
+    /// with the same allocator, destroys them.
+    ///
     /// TODO: Maybe this is better for an arena, who knows
     pub fn deinit(self: *Expr, alloc: Allocator) void {
         switch (self.*) {
@@ -279,7 +281,12 @@ fn literal(self: *Parser, alloc: Allocator) AnyParserError!*Expr {
 
     switch (current_token.tag) {
         .number => {
-            const number_val = try std.fmt.parseInt(u64, current_token.data, 10);
+            const number_val = try std.fmt.parseInt(
+                u64,
+                current_token.data,
+                10,
+            );
+
             const literal_expr = try alloc.create(Expr);
             literal_expr.* = .{ .literal = .{ .uint = number_val } };
             return literal_expr;
@@ -312,6 +319,13 @@ test "basic parse" {
 
     try p.parse(alloc, &ast);
 
-    try std.testing.expectEqualStrings(ast.ast.items[0].assignment.name, "W");
-    try std.testing.expectEqual(ast.ast.items[0].assignment.val.literal.uint, 1);
+    try std.testing.expectEqualStrings(
+        ast.ast.items[0].assignment.name,
+        "W",
+    );
+
+    try std.testing.expectEqual(
+        ast.ast.items[0].assignment.val.literal.uint,
+        1,
+    );
 }
