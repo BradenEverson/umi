@@ -71,6 +71,11 @@ pub const Expr = union(enum) {
     literal: Literal,
     variable: []const u8,
 
+    fn_call: struct {
+        name: []const u8,
+        arguments: std.ArrayList(*Expr) = .empty,
+    },
+
     binary_op: struct {
         left: *Expr,
         op: BinaryOp,
@@ -412,14 +417,16 @@ fn primary(
     self: *Parser,
     alloc: Allocator,
 ) AnyParserError!*Expr {
-    const current_token = self.tokens[self.cursor];
+    const current_token = self.peekTok();
     var expr: *Expr = undefined;
 
     switch (current_token.tag) {
         .ident => {
+            // TODO: Check here for if it's an IDENT, or IDENT(...) to call a fn
+            self.advance();
+
             const variable_expr = try alloc.create(Expr);
             variable_expr.* = .{ .variable = current_token.data };
-            self.advance();
             expr = variable_expr;
         },
 
