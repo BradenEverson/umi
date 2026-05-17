@@ -12,6 +12,8 @@ pub const Keyword = enum {
     mut,
     fn_kw,
     struct_kw,
+    enum_kw,
+    defer_kw,
 };
 
 pub const KeywordLookup = std.StaticStringMap(Keyword).initComptime(.{
@@ -19,14 +21,16 @@ pub const KeywordLookup = std.StaticStringMap(Keyword).initComptime(.{
     .{ "mut", .mut },
     .{ "fn", .fn_kw },
     .{ "struct", .struct_kw },
+    .{ "enum", .enum_kw },
+    .{ "defer", .defer_kw },
 });
 
 pub const TokenTag = enum {
     keyword,
     ident,
     number,
+    string,
 
-    semicolon,
     plus,
     minus,
     at,
@@ -42,14 +46,19 @@ pub const TokenTag = enum {
     close_brace,
     close_bracket,
     dot,
+    comma,
     gt,
     lt,
+
     colon,
-    string,
+    semicolon,
 };
 
 pub const TokenLookup = std.StaticStringMap(TokenTag).initComptime(.{
     .{ ";", .semicolon },
+    .{ ":", .colon },
+    .{ ",", .comma },
+    .{ ".", .dot },
     .{ "+", .plus },
     .{ "-", .minus },
     .{ "*", .star },
@@ -171,13 +180,6 @@ pub fn tokenize(stream: []const u8, tokens: *std.ArrayList(Token), alloc: std.me
 
             ' ', '\t', '\r' => {
                 while (idx < stream.len and (stream[idx] == ' ' or stream[idx] == '\t')) {
-                    idx += 1;
-                    col += 1;
-                }
-            },
-
-            ';' => {
-                while (idx < stream.len and stream[idx] != '\n') {
                     idx += 1;
                     col += 1;
                 }
