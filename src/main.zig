@@ -37,6 +37,8 @@ pub fn main(init: std.process.Init) !void {
     var tl: TopLevel = .{};
     defer tl.deinit(alloc);
 
+    try tl.initTypes(alloc);
+
     var parser: umi.parser = .{ .tokens = tokens.items };
     try parser.parse(alloc, &tl);
 }

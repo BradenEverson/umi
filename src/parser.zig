@@ -7,9 +7,22 @@ const tokenizer = @import("tokenizer.zig");
 const Token = tokenizer.Token;
 const TokenTag = tokenizer.TokenTag;
 
+const IntDef = struct {
+    signed: enum { Signed, Unsigned },
+    bits: u16,
+};
+
 pub const Type = union(enum) {
-    its_a_struct: []const u8,
-    its_a_literal: Literal,
+    its_a_struct: StructDef,
+    its_an_int: IntDef,
+    its_void,
+
+    pub fn deinit(t: *Type, alloc: Allocator) void {
+        switch (t.*) {
+            .its_a_struct => |*s| s.deinit(alloc),
+            else => {},
+        }
+    }
 };
 
 pub const StructDef = struct {
@@ -22,7 +35,7 @@ pub const StructDef = struct {
 
 pub const Function = struct {
     parameters: std.StringHashMapUnmanaged(Type) = .empty,
-    returns: Type,
+    returns: Type = .its_void,
     body: Ast = .{},
 
     pub fn deinit(f: *Function, alloc: Allocator) void {
@@ -32,14 +45,19 @@ pub const Function = struct {
 };
 
 pub const TopLevel = struct {
-    struct_defs: std.StringHashMapUnmanaged(StructDef) = .empty,
+    types: std.StringHashMapUnmanaged(Type) = .empty,
     functions: std.StringHashMapUnmanaged(Function) = .empty,
 
+    /// Register top level types that should always exist :)
+    pub fn initTypes(tl: *TopLevel, alloc: Allocator) !void {
+        try tl.types.put(alloc, "void", .its_void);
+    }
+
     pub fn deinit(tl: *TopLevel, alloc: Allocator) void {
-        var vals = tl.struct_defs.valueIterator();
+        var vals = tl.types.valueIterator();
         while (vals.next()) |s| s.deinit(alloc);
 
-        tl.struct_defs.deinit(alloc);
+        tl.types.deinit(alloc);
 
         var fns = tl.functions.valueIterator();
         while (fns.next()) |f| f.deinit(alloc);
@@ -115,6 +133,7 @@ pub const ParserError = error{
     ExpectedSemicolon,
     OutOfTokens,
     InvalidTopLevelStart,
+    InvalidType,
 };
 
 pub const Ast = struct {
@@ -183,8 +202,6 @@ pub fn parse(
     alloc: Allocator,
     tl: *TopLevel,
 ) AnyParserError!void {
-    _ = alloc;
-    _ = tl;
     while (!self.at_end()) {
         const top_level_token_ident = self.peekTok();
         try self.consume(.keyword);
@@ -195,17 +212,45 @@ pub fn parse(
         switch (kw) {
             .struct_kw => {},
             .fn_kw => {
+                var func: Function = .{};
+                errdefer func.deinit(alloc);
+
                 const fn_name = self.peekTok().data;
                 try self.consume(.ident);
 
-                std.debug.print("{s}\n", .{fn_name});
+                try self.consume(.open_paren);
+
+                // Start parsing out the parameters
+                while (self.peek() != .close_paren) {
+                    // TODO: parameters as name: type pairs
+                }
+                try self.consume(.close_paren);
+
+                // Get the return type
+                try self.consume(.minus);
+                try self.consume(.gt);
+
+                const ty = self.peekTok().data;
+                try self.consume(.ident);
+
+                func.returns = tl.types.get(ty) orelse
+                    return ParserError.InvalidType;
+
+                // Begin parsing the body ast
+                try self.consume(.open_brace);
+
+                while (self.peek() != .close_brace) {
+                    const expr = try self.statement(alloc);
+                    try func.body.ast.append(alloc, expr);
+                }
+
+                try self.consume(.close_brace);
+
+                try tl.functions.put(alloc, fn_name, func);
             },
 
             else => return ParserError.InvalidTopLevelStart,
         }
-
-        // const expr = try self.statement(alloc);
-        // try ast.ast.append(alloc, expr);
     }
 }
 
