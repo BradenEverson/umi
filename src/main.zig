@@ -3,6 +3,7 @@ const Io = std.Io;
 
 const umi = @import("umi");
 const Token = umi.tokenizer.Token;
+const TopLevel = umi.parser.TopLevel;
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
@@ -33,5 +34,9 @@ pub fn main(init: std.process.Init) !void {
 
     try umi.tokenizer.tokenize(source, &tokens, alloc);
 
-    std.debug.print("{any}\n", .{tokens.items});
+    var tl: TopLevel = .{};
+    defer tl.deinit(alloc);
+
+    var parser: umi.parser = .{ .tokens = tokens.items };
+    try parser.parse(alloc, &tl);
 }

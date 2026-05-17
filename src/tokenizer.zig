@@ -62,7 +62,6 @@ pub const TokenLookup = std.StaticStringMap(TokenTag).initComptime(.{
     .{ "+", .plus },
     .{ "-", .minus },
     .{ "*", .star },
-    .{ "/", .slash },
     .{ "(", .open_paren },
     .{ "{", .open_brace },
     .{ "[", .open_bracket },
@@ -182,6 +181,24 @@ pub fn tokenize(stream: []const u8, tokens: *std.ArrayList(Token), alloc: std.me
                 while (idx < stream.len and (stream[idx] == ' ' or stream[idx] == '\t')) {
                     idx += 1;
                     col += 1;
+                }
+            },
+
+            '/' => {
+                if (idx < stream.len and stream[idx + 1] == '/') {
+                    while (idx < stream.len and stream[idx] != '\n') {
+                        idx += 1;
+                        col += 1;
+                    }
+                } else {
+                    idx += 1;
+                    col += 1;
+                    curr = Token{
+                        .tag = .slash,
+                        .line = line,
+                        .col = start_col,
+                        .data = stream[start_idx..idx],
+                    };
                 }
             },
 

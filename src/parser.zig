@@ -14,17 +14,38 @@ pub const Type = union(enum) {
 
 pub const StructDef = struct {
     attributes: std.StringHashMapUnmanaged(Type) = .empty,
+
+    pub fn deinit(s: *StructDef, alloc: Allocator) void {
+        s.attributes.deinit(alloc);
+    }
 };
 
 pub const Function = struct {
     parameters: std.StringHashMapUnmanaged(Type) = .empty,
     returns: Type,
     body: Ast = .{},
+
+    pub fn deinit(f: *Function, alloc: Allocator) void {
+        f.parameters.deinit(alloc);
+        f.body.deinit(alloc);
+    }
 };
 
 pub const TopLevel = struct {
     struct_defs: std.StringHashMapUnmanaged(StructDef) = .empty,
     functions: std.StringHashMapUnmanaged(Function) = .empty,
+
+    pub fn deinit(tl: *TopLevel, alloc: Allocator) void {
+        var vals = tl.struct_defs.valueIterator();
+        while (vals.next()) |s| s.deinit(alloc);
+
+        tl.struct_defs.deinit(alloc);
+
+        var fns = tl.functions.valueIterator();
+        while (fns.next()) |f| f.deinit(alloc);
+
+        tl.functions.deinit(alloc);
+    }
 };
 
 pub const Expr = union(enum) {
@@ -160,24 +181,31 @@ fn at_end(self: *Parser) bool {
 pub fn parse(
     self: *Parser,
     alloc: Allocator,
-    ast: *TopLevel,
+    tl: *TopLevel,
 ) AnyParserError!void {
+    _ = alloc;
+    _ = tl;
     while (!self.at_end()) {
         const top_level_token_ident = self.peekTok();
-        self.consume(.keyword);
+        try self.consume(.keyword);
 
-        const kw = try tokenizer.KeywordLookup
+        const kw = tokenizer.KeywordLookup
             .get(top_level_token_ident.data).?;
 
         switch (kw) {
             .struct_kw => {},
-            .fn_kw => {},
+            .fn_kw => {
+                const fn_name = self.peekTok().data;
+                try self.consume(.ident);
+
+                std.debug.print("{s}\n", .{fn_name});
+            },
 
             else => return ParserError.InvalidTopLevelStart,
         }
 
-        const expr = try self.statement(alloc);
-        try ast.ast.append(alloc, expr);
+        // const expr = try self.statement(alloc);
+        // try ast.ast.append(alloc, expr);
     }
 }
 
