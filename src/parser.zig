@@ -7,9 +7,24 @@ const tokenizer = @import("tokenizer.zig");
 const Token = tokenizer.Token;
 const TokenTag = tokenizer.TokenTag;
 
-pub const TopLevel = union(enum) {
-    struct_def: struct {},
-    function: struct {},
+pub const Type = union(enum) {
+    its_a_struct: []const u8,
+    its_a_literal: Literal,
+};
+
+pub const StructDef = struct {
+    attributes: std.StringHashMapUnmanaged(Type) = .empty,
+};
+
+pub const Function = struct {
+    parameters: std.StringHashMapUnmanaged(Type) = .empty,
+    returns: Type,
+    body: Ast = .{},
+};
+
+pub const TopLevel = struct {
+    struct_defs: std.StringHashMapUnmanaged(StructDef) = .empty,
+    functions: std.StringHashMapUnmanaged(Function) = .empty,
 };
 
 pub const Expr = union(enum) {
@@ -60,6 +75,7 @@ pub const Literal = union(enum) {
     uint: u64,
     int: i64,
     float: f64,
+    void_ty,
 };
 
 pub const BinaryOp = enum {
@@ -77,6 +93,7 @@ pub const ParserError = error{
     UnexpectedKeywordHere,
     ExpectedSemicolon,
     OutOfTokens,
+    InvalidTopLevelStart,
 };
 
 pub const Ast = struct {
@@ -143,9 +160,22 @@ fn at_end(self: *Parser) bool {
 pub fn parse(
     self: *Parser,
     alloc: Allocator,
-    ast: *Ast,
+    ast: *TopLevel,
 ) AnyParserError!void {
     while (!self.at_end()) {
+        const top_level_token_ident = self.peekTok();
+        self.consume(.keyword);
+
+        const kw = try tokenizer.KeywordLookup
+            .get(top_level_token_ident.data).?;
+
+        switch (kw) {
+            .struct_kw => {},
+            .fn_kw => {},
+
+            else => return ParserError.InvalidTopLevelStart,
+        }
+
         const expr = try self.statement(alloc);
         try ast.ast.append(alloc, expr);
     }
@@ -366,18 +396,17 @@ test "basic parse" {
 
     var p: Parser = .{ .tokens = tokens };
 
-    var ast: Ast = .{};
-    defer ast.deinit(alloc);
-
-    try p.parse(alloc, &ast);
+    const s = try p.statement(alloc);
+    defer s.deinit(alloc);
+    defer alloc.destroy(s);
 
     try std.testing.expectEqualStrings(
-        ast.ast.items[0].assignment.name,
+        s.assignment.name,
         "W",
     );
 
     try std.testing.expectEqual(
-        ast.ast.items[0].assignment.val.literal.uint,
+        s.assignment.val.literal.uint,
         1,
     );
 }

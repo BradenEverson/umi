@@ -1,16 +1,5 @@
-/// A basic umi program
-
-struct SomeStruct {
-    foo: f32,
-    bar: i16,
-};
+/// Hello world :)
 
 fn main() -> void {
-    // Type inference, strings are a []u8
-    let a = "hello world\n";
-
-    // Also can explicitly set types
-    let mut b: usize = 10;
-
     print("Hello!\n");
 }
