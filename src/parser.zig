@@ -7,6 +7,11 @@ const tokenizer = @import("tokenizer.zig");
 const Token = tokenizer.Token;
 const TokenTag = tokenizer.TokenTag;
 
+pub const TopLevel = union(enum) {
+    struct_def: struct {},
+    function: struct {},
+};
+
 pub const Expr = union(enum) {
     assignment: struct { name: []const u8, val: *Expr },
     literal: Literal,
