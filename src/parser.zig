@@ -16,10 +16,23 @@ pub const Type = union(enum) {
     its_a_struct: StructDef,
     its_an_int: IntDef,
     its_void,
+    slice: *Type,
+    array: struct { ty: *Type, count: usize },
 
     pub fn deinit(t: *Type, alloc: Allocator) void {
         switch (t.*) {
             .its_a_struct => |*s| s.deinit(alloc),
+
+            .slice => |*slice_type| {
+                slice_type.deinit(alloc);
+                alloc.destroy(slice_type);
+            },
+
+            .array => |*arr| {
+                arr.ty.deinit(alloc);
+                alloc.destroy(arr.ty);
+            },
+
             else => {},
         }
     }
@@ -221,7 +234,41 @@ pub fn parse(
             .get(top_level_token_ident.data).?;
 
         switch (kw) {
-            .struct_kw => {},
+            .struct_kw => {
+                var struct_def: StructDef = .{};
+                errdefer struct_def.deinit(alloc);
+
+                const struct_name = self.peekTok().data;
+                try self.consume(.ident);
+
+                try self.consume(.open_brace);
+
+                while (self.peek() != .close_paren) {
+                    const attr_name = self.peekTok().data;
+                    try self.consume(.ident);
+
+                    try self.consume(.colon);
+
+                    const attr_type = self.peekTok().data;
+                    try self.consume(.ident);
+
+                    try self.consume(.comma);
+
+                    try struct_def.attributes.put(
+                        alloc,
+                        attr_name,
+                        attr_type,
+                    );
+                }
+
+                try self.consume(.close_brace);
+
+                try tl.types.put(
+                    alloc,
+                    struct_name,
+                    .{ .its_a_struct = struct_def },
+                );
+            },
             .fn_kw => {
                 var func: Function = .{};
                 errdefer func.deinit(alloc);
