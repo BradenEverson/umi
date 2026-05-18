@@ -256,7 +256,11 @@ pub fn parse(
                     const param_ty = self.peekTok().data;
                     try self.consume(.ident);
 
-                    try func.parameters.put(alloc, param_name, param_ty);
+                    try func.parameters.put(
+                        alloc,
+                        param_name,
+                        param_ty,
+                    );
                 }
                 try self.consume(.close_paren);
 
