@@ -54,9 +54,6 @@ pub const TopLevel = struct {
     }
 
     pub fn deinit(tl: *TopLevel, alloc: Allocator) void {
-        var vals = tl.types.valueIterator();
-        while (vals.next()) |s| s.deinit(alloc);
-
         tl.types.deinit(alloc);
 
         var fns = tl.functions.valueIterator();
@@ -108,6 +105,15 @@ pub const Expr = union(enum) {
 
                 alloc.destroy(bop.left);
                 alloc.destroy(bop.right);
+            },
+
+            .fn_call => |*f| {
+                for (f.arguments.items) |arg| {
+                    arg.deinit(alloc);
+                    alloc.destroy(arg);
+                }
+
+                f.arguments.deinit(alloc);
             },
 
             else => {},
@@ -416,12 +422,33 @@ fn primary(
 
     switch (current_token.tag) {
         .ident => {
-            // TODO: Check here for if it's an IDENT, or IDENT(...) to call a fn
             self.advance();
 
-            const variable_expr = try alloc.create(Expr);
-            variable_expr.* = .{ .variable = current_token.data };
-            expr = variable_expr;
+            if (self.peek() == .open_paren) {
+                // We're a function call!!!
+                const func_call = try alloc.create(Expr);
+                func_call.* = .{ .fn_call = .{ .name = current_token.data } };
+
+                self.advance();
+                while (self.peek() != .close_paren) {
+                    const arg = try self.term(alloc);
+
+                    try func_call.fn_call.arguments
+                        .append(alloc, arg);
+
+                    if (self.peek() != .close_paren)
+                        try self.consume(.comma);
+                }
+
+                try self.consume(.close_paren);
+
+                expr = func_call;
+            } else {
+                // We're just a variable reference
+                const variable_expr = try alloc.create(Expr);
+                variable_expr.* = .{ .variable = current_token.data };
+                expr = variable_expr;
+            }
         },
 
         .open_paren => {
