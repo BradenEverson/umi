@@ -26,7 +26,7 @@ pub const Type = union(enum) {
 };
 
 pub const StructDef = struct {
-    attributes: std.StringHashMapUnmanaged(Type) = .empty,
+    attributes: std.StringHashMapUnmanaged([]const u8) = .empty,
 
     pub fn deinit(s: *StructDef, alloc: Allocator) void {
         s.attributes.deinit(alloc);
@@ -34,8 +34,8 @@ pub const StructDef = struct {
 };
 
 pub const Function = struct {
-    parameters: std.StringHashMapUnmanaged(Type) = .empty,
-    returns: Type = .its_void,
+    parameters: std.StringHashMapUnmanaged([]const u8) = .empty,
+    returns: []const u8 = "void",
     body: Ast = .{},
 
     pub fn deinit(f: *Function, alloc: Allocator) void {
@@ -235,10 +235,7 @@ pub fn parse(
                     const param_ty = self.peekTok().data;
                     try self.consume(.ident);
 
-                    const param_type = tl.types.get(param_ty) orelse
-                        return ParserError.InvalidType;
-
-                    try func.parameters.put(alloc, param_name, param_type);
+                    try func.parameters.put(alloc, param_name, param_ty);
                 }
                 try self.consume(.close_paren);
 
@@ -246,11 +243,8 @@ pub fn parse(
                 try self.consume(.minus);
                 try self.consume(.gt);
 
-                const ty = self.peekTok().data;
+                func.returns = self.peekTok().data;
                 try self.consume(.ident);
-
-                func.returns = tl.types.get(ty) orelse
-                    return ParserError.InvalidType;
 
                 // Begin parsing the body ast
                 try self.consume(.open_brace);
