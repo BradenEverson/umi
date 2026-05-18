@@ -23,12 +23,12 @@ pub const Type = union(enum) {
         switch (t.*) {
             .its_a_struct => |*s| s.deinit(alloc),
 
-            .slice => |*slice_type| {
+            .slice => |slice_type| {
                 slice_type.deinit(alloc);
                 alloc.destroy(slice_type);
             },
 
-            .array => |*arr| {
+            .array => |arr| {
                 arr.ty.deinit(alloc);
                 alloc.destroy(arr.ty);
             },
@@ -67,6 +67,9 @@ pub const TopLevel = struct {
     }
 
     pub fn deinit(tl: *TopLevel, alloc: Allocator) void {
+        var types = tl.types.valueIterator();
+        while (types.next()) |t| t.deinit(alloc);
+
         tl.types.deinit(alloc);
 
         var fns = tl.functions.valueIterator();
@@ -243,7 +246,7 @@ pub fn parse(
 
                 try self.consume(.open_brace);
 
-                while (self.peek() != .close_paren) {
+                while (self.peek() != .close_brace) {
                     const attr_name = self.peekTok().data;
                     try self.consume(.ident);
 
