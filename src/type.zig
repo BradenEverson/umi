@@ -4,7 +4,7 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 
 const IntDef = struct {
-    signed: enum { Signed, Unsigned },
+    signed: enum { signed, unsigned },
     bits: u16,
 };
 

@@ -26,6 +26,21 @@ pub const TopLevel = struct {
     types: std.StringHashMapUnmanaged(Type) = .empty,
     functions: std.StringHashMapUnmanaged(Function) = .empty,
 
+    pub fn getType(tl: *TopLevel, ty: []const u8) ?Type {
+        switch (ty[0]) {
+            'i', 'u' => {
+                // Check for if it's a valid int
+                const bits_str = ty[1..];
+                const bits = std.fmt.parseInt(u16, bits_str, 10) catch return null;
+                return .{ .its_an_int = .{
+                    .signed = if (ty[0] == 'u') .unsigned else .signed,
+                    .bits = bits,
+                } };
+            },
+            else => return tl.types.get(ty),
+        }
+    }
+
     /// Register top level types that should always exist :)
     pub fn initTypes(tl: *TopLevel, alloc: Allocator) !void {
         try tl.types.put(alloc, "void", .its_void);
@@ -540,4 +555,19 @@ test "basic parse" {
         s.assignment.val.literal.uint,
         1,
     );
+}
+
+test "top level type parsing" {
+    var tl: TopLevel = .{};
+    defer tl.deinit(std.testing.allocator);
+
+    var ty = tl.getType("u31").?;
+
+    try std.testing.expectEqual(.unsigned, ty.its_an_int.signed);
+    try std.testing.expectEqual(31, ty.its_an_int.bits);
+
+    ty = tl.getType("i5").?;
+
+    try std.testing.expectEqual(.signed, ty.its_an_int.signed);
+    try std.testing.expectEqual(5, ty.its_an_int.bits);
 }
