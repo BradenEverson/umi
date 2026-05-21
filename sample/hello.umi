@@ -1,5 +1,9 @@
 /// Hello world :)
 
+fn foo() -> i32 {
+    return 10;
+}
+
 fn main() -> void {
     print(10);
 }
