@@ -43,4 +43,5 @@ pub fn main(init: std.process.Init) !void {
     try parser.parse(alloc, &tl);
 
     try umi.semantic_analysis.nameResolution(&tl);
+    try umi.semantic_analysis.typeCheck(&tl);
 }
