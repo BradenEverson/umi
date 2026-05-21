@@ -44,6 +44,7 @@ pub const TopLevel = struct {
     /// Register top level types that should always exist :)
     pub fn initTypes(tl: *TopLevel, alloc: Allocator) !void {
         try tl.types.put(alloc, "void", .its_void);
+        try tl.types.put(alloc, "bool", .its_bool);
     }
 
     pub fn deinit(tl: *TopLevel, alloc: Allocator) void {
@@ -561,6 +562,8 @@ test "top level type parsing" {
     var tl: TopLevel = .{};
     defer tl.deinit(std.testing.allocator);
 
+    try tl.initTypes(std.testing.allocator);
+
     var ty = tl.getType("u31").?;
 
     try std.testing.expectEqual(.unsigned, ty.its_an_int.signed);
@@ -570,4 +573,10 @@ test "top level type parsing" {
 
     try std.testing.expectEqual(.signed, ty.its_an_int.signed);
     try std.testing.expectEqual(5, ty.its_an_int.bits);
+
+    ty = tl.getType("void").?;
+    try std.testing.expectEqual(.its_void, ty);
+
+    ty = tl.getType("bool").?;
+    try std.testing.expectEqual(.its_bool, ty);
 }

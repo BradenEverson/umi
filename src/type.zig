@@ -12,6 +12,7 @@ pub const Type = union(enum) {
     its_a_struct: StructDef,
     its_an_int: IntDef,
     its_void,
+    its_bool,
     slice: *Type,
     array: struct { ty: *Type, count: usize },
 
