@@ -37,6 +37,18 @@ pub const TopLevel = struct {
                     .bits = bits,
                 } };
             },
+
+            'f' => {
+                const bits_str = ty[1..];
+                const bits = std.fmt.parseInt(u16, bits_str, 10) catch return null;
+                return switch (bits) {
+                    16 => .{ .its_a_float = .float16 },
+                    32 => .{ .its_a_float = .float32 },
+                    64 => .{ .its_a_float = .float64 },
+                    else => null,
+                };
+            },
+
             else => return tl.types.get(ty),
         }
     }
@@ -579,4 +591,15 @@ test "top level type parsing" {
 
     ty = tl.getType("bool").?;
     try std.testing.expectEqual(.its_bool, ty);
+
+    ty = tl.getType("f16").?;
+    try std.testing.expectEqual(.float16, ty.its_a_float);
+
+    ty = tl.getType("f32").?;
+    try std.testing.expectEqual(.float32, ty.its_a_float);
+
+    ty = tl.getType("f64").?;
+    try std.testing.expectEqual(.float64, ty.its_a_float);
+
+    try std.testing.expectEqual(null, tl.getType("f50"));
 }
