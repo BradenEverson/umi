@@ -8,9 +8,16 @@ const IntDef = struct {
     bits: u16,
 };
 
+const FloatDef = enum {
+    float16,
+    float32,
+    float64,
+};
+
 pub const Type = union(enum) {
     its_a_struct: StructDef,
     its_an_int: IntDef,
+    its_a_float: FloatDef,
     its_void,
     its_bool,
     slice: *Type,
