@@ -17,15 +17,16 @@ pub const Keyword = enum {
     return_kw,
 };
 
-pub const KeywordLookup = std.StaticStringMap(Keyword).initComptime(.{
-    .{ "let", .let },
-    .{ "mut", .mut },
-    .{ "fn", .fn_kw },
-    .{ "struct", .struct_kw },
-    .{ "enum", .enum_kw },
-    .{ "defer", .defer_kw },
-    .{ "return", .return_kw },
-});
+pub const KeywordLookup =
+    std.StaticStringMap(Keyword).initComptime(.{
+        .{ "let", .let },
+        .{ "mut", .mut },
+        .{ "fn", .fn_kw },
+        .{ "struct", .struct_kw },
+        .{ "enum", .enum_kw },
+        .{ "defer", .defer_kw },
+        .{ "return", .return_kw },
+    });
 
 pub const TokenTag = enum {
     keyword,
@@ -56,23 +57,24 @@ pub const TokenTag = enum {
     semicolon,
 };
 
-pub const TokenLookup = std.StaticStringMap(TokenTag).initComptime(.{
-    .{ ";", .semicolon },
-    .{ ":", .colon },
-    .{ ",", .comma },
-    .{ ".", .dot },
-    .{ "+", .plus },
-    .{ "-", .minus },
-    .{ "*", .star },
-    .{ "(", .open_paren },
-    .{ "{", .open_brace },
-    .{ "[", .open_bracket },
-    .{ ")", .close_paren },
-    .{ "}", .close_brace },
-    .{ "]", .close_bracket },
-    .{ ">", .gt },
-    .{ "<", .lt },
-});
+pub const TokenLookup =
+    std.StaticStringMap(TokenTag).initComptime(.{
+        .{ ";", .semicolon },
+        .{ ":", .colon },
+        .{ ",", .comma },
+        .{ ".", .dot },
+        .{ "+", .plus },
+        .{ "-", .minus },
+        .{ "*", .star },
+        .{ "(", .open_paren },
+        .{ "{", .open_brace },
+        .{ "[", .open_bracket },
+        .{ ")", .close_paren },
+        .{ "}", .close_brace },
+        .{ "]", .close_bracket },
+        .{ ">", .gt },
+        .{ "<", .lt },
+    });
 
 pub const Token = struct {
     tag: TokenTag,
@@ -88,7 +90,11 @@ pub const Token = struct {
     }
 };
 
-pub fn tokenize(stream: []const u8, tokens: *std.ArrayList(Token), alloc: std.mem.Allocator) !void {
+pub fn tokenize(
+    stream: []const u8,
+    tokens: *std.ArrayList(Token),
+    alloc: std.mem.Allocator,
+) !void {
     var idx: usize = 0;
     var line: usize = 1;
     var col: usize = 1;
@@ -112,16 +118,20 @@ pub fn tokenize(stream: []const u8, tokens: *std.ArrayList(Token), alloc: std.me
             };
         } else switch (stream[idx]) {
             'a'...'z', 'A'...'Z', '_' => {
-                while (idx < stream.len and (std.ascii.isAlphanumeric(stream[idx]) or stream[idx] == '_')) {
+                while (idx < stream.len and
+                    (std.ascii.isAlphanumeric(stream[idx]) or
+                        stream[idx] == '_'))
+                {
                     idx += 1;
                     col += 1;
                 }
                 const ident = stream[start_idx..idx];
 
-                const tag: TokenTag = if (KeywordLookup.get(ident)) |_|
-                    .keyword
-                else
-                    .ident;
+                const tag: TokenTag =
+                    if (KeywordLookup.get(ident)) |_|
+                        .keyword
+                    else
+                        .ident;
 
                 curr = Token{
                     .tag = tag,
@@ -133,7 +143,9 @@ pub fn tokenize(stream: []const u8, tokens: *std.ArrayList(Token), alloc: std.me
 
             '=' => {
                 var tag: TokenTag = .equals;
-                if (idx < stream.len and stream[idx + 1] == '=') {
+                if (idx < stream.len and
+                    stream[idx + 1] == '=')
+                {
                     idx += 1;
                     tag = .equals_equals;
                 }
@@ -152,7 +164,9 @@ pub fn tokenize(stream: []const u8, tokens: *std.ArrayList(Token), alloc: std.me
                 idx += 1;
                 col += 1;
 
-                while (idx < stream.len and stream[idx] != '"') {
+                while (idx < stream.len and
+                    stream[idx] != '"')
+                {
                     idx += 1;
                     col += 1;
                 }
@@ -170,7 +184,10 @@ pub fn tokenize(stream: []const u8, tokens: *std.ArrayList(Token), alloc: std.me
 
             '0'...'9' => {
                 var seen_dot = false;
-                while (idx < stream.len and (std.ascii.isDigit(stream[idx]) or (stream[idx] == '.' and !seen_dot))) {
+                while (idx < stream.len and
+                    (std.ascii.isDigit(stream[idx]) or
+                        (stream[idx] == '.' and !seen_dot)))
+                {
                     if (stream[idx] == '.')
                         seen_dot = true;
 
@@ -187,7 +204,10 @@ pub fn tokenize(stream: []const u8, tokens: *std.ArrayList(Token), alloc: std.me
             },
 
             ' ', '\t', '\r' => {
-                while (idx < stream.len and (stream[idx] == ' ' or stream[idx] == '\t')) {
+                while (idx < stream.len and
+                    (stream[idx] == ' ' or
+                        stream[idx] == '\t'))
+                {
                     idx += 1;
                     col += 1;
                 }
@@ -195,7 +215,9 @@ pub fn tokenize(stream: []const u8, tokens: *std.ArrayList(Token), alloc: std.me
 
             '/' => {
                 if (idx < stream.len and stream[idx + 1] == '/') {
-                    while (idx < stream.len and stream[idx] != '\n') {
+                    while (idx < stream.len and
+                        stream[idx] != '\n')
+                    {
                         idx += 1;
                         col += 1;
                     }
@@ -218,7 +240,10 @@ pub fn tokenize(stream: []const u8, tokens: *std.ArrayList(Token), alloc: std.me
             },
 
             else => {
-                std.debug.print("Unexpected character: '{c}' at line {}, col {}\n", .{ stream[idx], line, col });
+                std.debug.print(
+                    "Unexpected character: '{c}' at line {}, col {}\n",
+                    .{ stream[idx], line, col },
+                );
 
                 return TokenizeError.UnexpectedCharacter;
             },
@@ -229,7 +254,11 @@ pub fn tokenize(stream: []const u8, tokens: *std.ArrayList(Token), alloc: std.me
         }
     }
 
-    try tokens.append(alloc, .{ .col = col, .line = line, .tag = .eof });
+    try tokens.append(alloc, .{
+        .col = col,
+        .line = line,
+        .tag = .eof,
+    });
 }
 
 test "basic tokenize" {
