@@ -31,7 +31,12 @@ pub const TopLevel = struct {
             'i', 'u' => {
                 // Check for if it's a valid int
                 const bits_str = ty[1..];
-                const bits = std.fmt.parseInt(u16, bits_str, 10) catch return null;
+                const bits = std.fmt.parseInt(
+                    u16,
+                    bits_str,
+                    10,
+                ) catch return null;
+
                 return .{ .its_an_int = .{
                     .signed = if (ty[0] == 'u') .unsigned else .signed,
                     .bits = bits,
@@ -40,7 +45,12 @@ pub const TopLevel = struct {
 
             'f' => {
                 const bits_str = ty[1..];
-                const bits = std.fmt.parseInt(u16, bits_str, 10) catch return null;
+                const bits = std.fmt.parseInt(
+                    u16,
+                    bits_str,
+                    10,
+                ) catch return null;
+
                 return switch (bits) {
                     16 => .{ .its_a_float = .float16 },
                     32 => .{ .its_a_float = .float32 },
@@ -108,6 +118,11 @@ pub const Expr = union(enum) {
             .unary_op => |u| {
                 u.expr.deinit(alloc);
                 alloc.destroy(u.expr);
+            },
+
+            .return_val => |r| {
+                r.deinit(alloc);
+                alloc.destroy(r);
             },
 
             .binary_op => |bop| {
