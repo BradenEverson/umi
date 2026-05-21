@@ -2,9 +2,12 @@ fn foo() -> i32 {
     return 10;
 }
 
-fn bar() -> i32 {
+fn bar() -> u8 {
     return 10;
 }
+
+// fn baz(a: NotAType) -> void {}
+// fn faz(a: u32) -> NotAType {}
 
 fn main() -> void {
     foo();

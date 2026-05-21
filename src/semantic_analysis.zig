@@ -19,6 +19,7 @@ pub const SemanticAnalysisError = error{
 /// Ensures all named types and functions actually exist in the
 /// context
 pub fn nameResolution(tl: *TopLevel) SemanticAnalysisError!void {
+    // First, validate all function bodys, parameters, and return types
     var functions = tl.functions.iterator();
     while (functions.next()) |entry| {
         const name = entry.key_ptr;
@@ -26,12 +27,34 @@ pub fn nameResolution(tl: *TopLevel) SemanticAnalysisError!void {
 
         const function = entry.value_ptr;
 
+        var param_types = function.parameters.iterator();
+        while (param_types.next()) |param| {
+            if (tl.getType(param.value_ptr.*) == null)
+                return SemanticAnalysisError.TypeDoesNotExist;
+        }
+
         // Ensure return type exists:
         if (tl.getType(function.returns) == null)
             return SemanticAnalysisError.TypeDoesNotExist;
 
         for (function.body.ast.items) |ast| {
             try nameResolveAst(tl, function, ast);
+        }
+    }
+
+    // Now we gotta validate all the structure definitions that exist in our
+    // top level
+    var types = tl.types.iterator();
+    while (types.next()) |ty| {
+        switch (ty.value_ptr.*) {
+            .its_a_struct => |struct_def| {
+                var attributes = struct_def.attributes.iterator();
+                while (attributes.next()) |attr| {
+                    if (tl.getType(attr.value_ptr.*) == null)
+                        return SemanticAnalysisError.TypeDoesNotExist;
+                }
+            },
+            else => {},
         }
     }
 }
