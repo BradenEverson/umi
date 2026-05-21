@@ -163,7 +163,7 @@ fn peek(self: *const Parser) TokenTag {
     return self.tokens[self.cursor].tag;
 }
 
-fn peek_n(self: *const Parser, n: comptime_int) TokenTag {
+fn peekN(self: *const Parser, n: comptime_int) TokenTag {
     if (self.cursor + n >= self.tokens.len) {
         return .eof;
     }
@@ -302,7 +302,7 @@ pub fn expression(
     self: *Parser,
     alloc: Allocator,
 ) AnyParserError!*Expr {
-    if (self.peek() == .ident and self.peek_n(1) == .equals) {
+    if (self.peek() == .ident and self.peekN(1) == .equals) {
         const name = self.tokens[self.cursor].data;
         self.advance();
         self.advance();
