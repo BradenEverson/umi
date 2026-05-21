@@ -36,7 +36,11 @@ pub fn nameResolution(tl: *TopLevel) SemanticAnalysisError!void {
     }
 }
 
-pub fn nameResolveAst(tl: *TopLevel, function: *const parser.Function, expr: *const Expr) SemanticAnalysisError!void {
+pub fn nameResolveAst(
+    tl: *TopLevel,
+    function: *const parser.Function,
+    expr: *const Expr,
+) SemanticAnalysisError!void {
     switch (expr.*) {
         .return_val => |r| try nameResolveAst(tl, function, r),
         else => {},
