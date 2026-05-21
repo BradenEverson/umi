@@ -23,3 +23,5 @@ pub fn name_resolution(tl: *TopLevel) SemanticAnalysisError!void {
 pub fn type_check(tl: *TopLevel) SemanticAnalysisError!void {
     _ = tl;
 }
+
+test {}

@@ -14,6 +14,7 @@ pub const Keyword = enum {
     struct_kw,
     enum_kw,
     defer_kw,
+    return_kw,
 };
 
 pub const KeywordLookup = std.StaticStringMap(Keyword).initComptime(.{
@@ -23,6 +24,7 @@ pub const KeywordLookup = std.StaticStringMap(Keyword).initComptime(.{
     .{ "struct", .struct_kw },
     .{ "enum", .enum_kw },
     .{ "defer", .defer_kw },
+    .{ "return", .return_kw },
 });
 
 pub const TokenTag = enum {
@@ -77,6 +79,13 @@ pub const Token = struct {
     line: usize = 0,
     col: usize = 0,
     data: []const u8 = "no data",
+
+    pub fn kw(self: Token) ?Keyword {
+        return switch (self.tag) {
+            .keyword => KeywordLookup.get(self.data),
+            else => null,
+        };
+    }
 };
 
 pub fn tokenize(stream: []const u8, tokens: *std.ArrayList(Token), alloc: std.mem.Allocator) !void {

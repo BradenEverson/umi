@@ -77,6 +77,8 @@ pub const Expr = union(enum) {
     literal: Literal,
     variable: []const u8,
 
+    return_val: *Expr,
+
     fn_call: struct {
         name: []const u8,
         arguments: std.ArrayList(*Expr) = .empty,
@@ -321,9 +323,22 @@ pub fn statement(
     self: *Parser,
     alloc: Allocator,
 ) AnyParserError!*Expr {
-    const expr = try self.expression(alloc);
-    try self.consume(.semicolon);
-    return expr;
+    if (self.peek() == .keyword and
+        self.peekTok().kw().? == .return_kw)
+    {
+        try self.consume(.keyword);
+
+        const expr = try self.expression(alloc);
+        try self.consume(.semicolon);
+
+        const ret = try alloc.create(Expr);
+        ret.* = .{ .return_val = expr };
+        return ret;
+    } else {
+        const expr = try self.expression(alloc);
+        try self.consume(.semicolon);
+        return expr;
+    }
 }
 
 pub fn expression(
