@@ -41,4 +41,6 @@ pub fn main(init: std.process.Init) !void {
 
     var parser: umi.parser = .{ .tokens = tokens.items };
     try parser.parse(alloc, &tl);
+
+    try umi.semantic_analysis.nameResolution(&tl);
 }

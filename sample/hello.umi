@@ -5,5 +5,5 @@ fn foo() -> i32 {
 }
 
 fn main() -> void {
-    print(10);
+    print(foo());
 }

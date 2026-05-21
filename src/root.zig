@@ -6,6 +6,7 @@ const Io = std.Io;
 pub const tokenizer = @import("tokenizer.zig");
 pub const parser = @import("parser.zig");
 pub const compiler = @import("compiler.zig");
+pub const semantic_analysis = @import("semantic_analysis.zig");
 pub const types = @import("type.zig");
 
 test {
