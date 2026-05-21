@@ -36,14 +36,39 @@ pub fn nameResolution(tl: *TopLevel) SemanticAnalysisError!void {
     }
 }
 
-pub fn nameResolveAst(
+fn nameResolveAst(
     tl: *TopLevel,
     function: *const parser.Function,
     expr: *const Expr,
 ) SemanticAnalysisError!void {
     switch (expr.*) {
         .return_val => |r| try nameResolveAst(tl, function, r),
-        else => {},
+        .assignment => |a| {
+            // TODO: We might need a local variable scope for the function?
+            // like a.name should not exist right now because it's a declaration
+            // although maybe this doesn't matter, just keeping this here so I
+            // remember we need to make a decision
+            try nameResolveAst(tl, function, a.val);
+        },
+        .variable => |v| {
+            _ = v;
+            // Yep okay, we DO need a local/global variable scope on the
+            // top level. We should ensure this variable exists and is
+            // declared BEFORE we make it to this step
+        },
+        .binary_op => |b| {
+            try nameResolveAst(tl, function, b.left);
+            try nameResolveAst(tl, function, b.right);
+        },
+        .unary_op => |u| try nameResolveAst(tl, function, u.expr),
+        .fn_call => |f| {
+            if (tl.functions.get(f.name) == null)
+                return SemanticAnalysisError.FunctionDoesNotExist;
+
+            for (f.arguments.items) |arg|
+                try nameResolveAst(tl, function, arg);
+        },
+        .literal => {},
     }
 }
 

@@ -1,0 +1,15 @@
+fn foo() -> i32 {
+    return 10;
+}
+
+fn bar() -> i32 {
+    return 10;
+}
+
+fn main() -> void {
+    foo();
+    bar();
+
+    // Does not exist!
+    // fas();
+}
