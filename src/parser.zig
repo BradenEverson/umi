@@ -504,7 +504,11 @@ fn primary(
             if (self.peek() == .open_paren) {
                 // We're a function call!!!
                 const func_call = try alloc.create(Expr);
-                func_call.* = .{ .fn_call = .{ .name = current_token.data } };
+                func_call.* = .{
+                    .fn_call = .{
+                        .name = current_token.data,
+                    },
+                };
 
                 self.advance();
                 while (self.peek() != .close_paren) {
@@ -523,7 +527,9 @@ fn primary(
             } else {
                 // We're just a variable reference
                 const variable_expr = try alloc.create(Expr);
-                variable_expr.* = .{ .variable = current_token.data };
+                variable_expr.* = .{
+                    .variable = current_token.data,
+                };
                 expr = variable_expr;
             }
         },

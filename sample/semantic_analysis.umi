@@ -6,6 +6,17 @@ fn bar() -> u8 {
     return 10;
 }
 
+struct B {
+a: A,
+}
+
+struct A {
+    thing: f32,
+    another: bool,
+    // problem: NotAType,
+}
+
+
 // fn baz(a: NotAType) -> void {}
 // fn faz(a: u32) -> NotAType {}
 
