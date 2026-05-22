@@ -127,7 +127,7 @@ pub fn exprEvalsTo(tl: *TopLevel, scope: *parser.Function, expr: *const Expr) Ty
         .literal => |l| return l.getType(),
         .binary_op => |b| {
             const left = try exprEvalsTo(tl, scope, b.left);
-            const right = try exprEvalsTo(tl, scope, b.left);
+            const right = try exprEvalsTo(tl, scope, b.right);
 
             return left.agreesWith(right);
         },
@@ -177,4 +177,27 @@ test "variable type resolution" {
 
     try std.testing.expectEqual(32, ty.its_an_int.bits);
     try std.testing.expectEqual(.unsigned, ty.its_an_int.signed);
+}
+
+test "binary op type resolution" {
+    var tl: TopLevel = .{};
+    var f: parser.Function = .{};
+    defer f.deinit(std.testing.allocator);
+
+    try f.variables.put(
+        std.testing.allocator,
+        "A",
+        .{
+            .ty = "f16",
+            .mutable = false,
+        },
+    );
+
+    var variable: Expr = .{ .variable = "A" };
+    var constant: Expr = .{ .literal = .{ .int = 10 } };
+
+    const sum: Expr = .{ .binary_op = .{ .right = &variable, .left = &constant, .op = .add } };
+    const ty = try exprEvalsTo(&tl, &f, &sum);
+
+    try std.testing.expectEqual(.float16, ty.its_a_float);
 }
