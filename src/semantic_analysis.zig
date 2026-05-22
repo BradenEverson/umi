@@ -8,6 +8,7 @@ const TopLevel = parser.TopLevel;
 const Expr = parser.Expr;
 
 const ts = @import("type.zig");
+const TypeCheckError = ts.TypeCheckError;
 const Type = ts.Type;
 
 pub const SemanticAnalysisError = error{
@@ -112,6 +113,68 @@ fn nameResolveAst(
     }
 }
 
+pub fn exprEvalsTo(tl: *TopLevel, scope: *parser.Function, expr: *const Expr) TypeCheckError!Type {
+    switch (expr.*) {
+        // We can safely unwrap these optionals at this point because this
+        // is assumed to run after the name resolution. We know these
+        // variables all exist and the types of them must too
+        .variable => |v| return tl.getType(scope.variables.get(v).?.ty).?,
+
+        .fn_call => |f| return tl.types.get(
+            tl.functions.get(f.name).?.returns,
+        ).?,
+
+        .literal => |l| return l.getType(),
+        .binary_op => |b| {
+            const left = try exprEvalsTo(tl, scope, b.left);
+            const right = try exprEvalsTo(tl, scope, b.left);
+
+            return left.agreesWith(right);
+        },
+
+        // TODO: This might not also be accurate, I just can't determine for sure rn
+        .unary_op => |u| return exprEvalsTo(tl, scope, u.expr),
+        .return_val => return .its_void,
+
+        .construction => return .its_void,
+        .assignment => return .its_void,
+    }
+}
+
 pub fn typeCheck(tl: *TopLevel) SemanticAnalysisError!void {
     _ = tl;
+}
+
+test "type resolution" {
+    var tl: TopLevel = .{};
+    var f: parser.Function = .{};
+
+    var a: Expr = .{ .literal = .{ .int = 1 } };
+    var b: Expr = .{ .literal = .{ .int = 2 } };
+
+    const apb: Expr = .{ .binary_op = .{ .left = &a, .right = &b, .op = .add } };
+
+    const ty = try exprEvalsTo(&tl, &f, &apb);
+    try std.testing.expectEqual(.its_a_comptime_number, ty);
+}
+
+test "variable type resolution" {
+    var tl: TopLevel = .{};
+    var f: parser.Function = .{};
+    defer f.deinit(std.testing.allocator);
+
+    try f.variables.put(
+        std.testing.allocator,
+        "A",
+        .{
+            .ty = "u32",
+            .mutable = false,
+        },
+    );
+
+    const variable: Expr = .{ .variable = "A" };
+    const ty = try exprEvalsTo(&tl, &f, &variable);
+
+    try std.testing.expectEqual(32, ty.its_an_int.bits);
+    try std.testing.expectEqual(.unsigned, ty.its_an_int.signed);
 }

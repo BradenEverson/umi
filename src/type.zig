@@ -14,15 +14,46 @@ const FloatDef = enum {
     float64,
 };
 
+pub const TypeCheckError = error{
+    BinaryOpTypesDoNotAgree,
+};
+
 pub const Type = union(enum) {
     its_a_struct: StructDef,
     its_an_int: IntDef,
     its_a_float: FloatDef,
+    // This is for literals that we do not yet constrain to
+    // a width or int vs. floatness
+    its_a_comptime_number,
     its_void,
-    its_bool,
+    its_a_bool,
     its_a_pointer: *Type,
     slice: *Type,
     array: struct { ty: *Type, count: usize },
+
+    pub fn agreesWith(a: Type, b: Type) TypeCheckError!Type {
+        switch (a) {
+            .its_a_comptime_number => switch (b) {
+                .its_an_int, .its_a_float => return b,
+                else => {},
+            },
+            else => {},
+        }
+
+        switch (b) {
+            .its_a_comptime_number => switch (a) {
+                .its_an_int, .its_a_float => return a,
+                else => {},
+            },
+            else => {},
+        }
+
+        if (std.meta.eql(a, b)) {
+            return a;
+        } else {
+            return TypeCheckError.BinaryOpTypesDoNotAgree;
+        }
+    }
 
     pub fn deinit(t: *Type, alloc: Allocator) void {
         switch (t.*) {
@@ -43,7 +74,11 @@ pub const Type = union(enum) {
                 alloc.destroy(arr.ty);
             },
 
-            else => {},
+            .its_an_int => {},
+            .its_a_float => {},
+            .its_a_comptime_number => {},
+            .its_void => {},
+            .its_a_bool => {},
         }
     }
 };

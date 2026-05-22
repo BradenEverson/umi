@@ -15,6 +15,7 @@ test {
     _ = @import("optimizer.zig");
     _ = @import("parser.zig");
     _ = @import("tokenizer.zig");
+    _ = @import("semantic_analysis.zig");
     _ = @import("vm.zig");
     _ = @import("type.zig");
 }

@@ -78,7 +78,7 @@ pub const TopLevel = struct {
     /// Register top level types that should always exist :)
     pub fn initTypes(tl: *TopLevel, alloc: Allocator) !void {
         try tl.types.put(alloc, "void", .its_void);
-        try tl.types.put(alloc, "bool", .its_bool);
+        try tl.types.put(alloc, "bool", .its_a_bool);
     }
 
     pub fn deinit(tl: *TopLevel, alloc: Allocator) void {
@@ -174,6 +174,13 @@ pub const Literal = union(enum) {
     int: i64,
     float: f64,
     bool: bool,
+
+    pub fn getType(self: Literal) Type {
+        return switch (self) {
+            .uint, .int, .float => .its_a_comptime_number,
+            .bool => .its_a_bool,
+        };
+    }
 };
 
 pub const BinaryOp = enum {
@@ -706,7 +713,7 @@ test "top level type parsing" {
     try std.testing.expectEqual(.its_void, ty);
 
     ty = tl.getType("bool").?;
-    try std.testing.expectEqual(.its_bool, ty);
+    try std.testing.expectEqual(.its_a_bool, ty);
 
     ty = tl.getType("f16").?;
     try std.testing.expectEqual(.float16, ty.its_a_float);
