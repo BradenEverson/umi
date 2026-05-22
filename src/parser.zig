@@ -173,7 +173,7 @@ pub const Literal = union(enum) {
     uint: u64,
     int: i64,
     float: f64,
-    void_ty,
+    bool: bool,
 };
 
 pub const BinaryOp = enum {
@@ -620,7 +620,7 @@ fn literal(
     self: *Parser,
     alloc: Allocator,
 ) AnyParserError!*Expr {
-    const current_token = self.tokens[self.cursor];
+    const current_token = self.peekTok();
     self.advance();
 
     switch (current_token.tag) {
@@ -634,6 +634,19 @@ fn literal(
             const literal_expr = try alloc.create(Expr);
             literal_expr.* = .{ .literal = .{ .uint = number_val } };
             return literal_expr;
+        },
+        .keyword => switch (current_token.kw().?) {
+            .true_kw => {
+                const literal_expr = try alloc.create(Expr);
+                literal_expr.* = .{ .literal = .{ .bool = true } };
+                return literal_expr;
+            },
+            .false_kw => {
+                const literal_expr = try alloc.create(Expr);
+                literal_expr.* = .{ .literal = .{ .bool = false } };
+                return literal_expr;
+            },
+            else => return ParserError.UnexpectedKeywordHere,
         },
         else => {
             return ParserError.UnexpectedToken;

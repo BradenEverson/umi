@@ -115,5 +115,3 @@ fn nameResolveAst(
 pub fn typeCheck(tl: *TopLevel) SemanticAnalysisError!void {
     _ = tl;
 }
-
-test {}

@@ -20,11 +20,17 @@ pub const Type = union(enum) {
     its_a_float: FloatDef,
     its_void,
     its_bool,
+    its_a_pointer: *Type,
     slice: *Type,
     array: struct { ty: *Type, count: usize },
 
     pub fn deinit(t: *Type, alloc: Allocator) void {
         switch (t.*) {
+            .its_a_pointer => |p| {
+                p.deinit(alloc);
+                alloc.destroy(p);
+            },
+
             .its_a_struct => |*s| s.deinit(alloc),
 
             .slice => |slice_type| {
