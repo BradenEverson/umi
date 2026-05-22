@@ -10,15 +10,27 @@ const TokenTag = tokenizer.TokenTag;
 const ts = @import("type.zig");
 const Type = ts.Type;
 const StructDef = ts.StructDef;
+const VariableDef = ts.VariableDef;
 
 pub const Function = struct {
+    variables: std.StringHashMapUnmanaged(VariableDef) = .empty,
     parameters: std.StringHashMapUnmanaged([]const u8) = .empty,
     returns: []const u8 = "void",
     body: Ast = .{},
 
+    /// Checks if variable exists within the current scope
+    pub fn variableExists(f: *const Function, name: []const u8) bool {
+        const in_params = f.parameters.get(name) != null;
+        const in_variables = f.variables.get(name) != null;
+
+        // TODO: Maybe a global scope should exist as well
+        return in_params or in_variables;
+    }
+
     pub fn deinit(f: *Function, alloc: Allocator) void {
         f.parameters.deinit(alloc);
         f.body.deinit(alloc);
+        f.variables.deinit(alloc);
     }
 };
 

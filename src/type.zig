@@ -49,3 +49,8 @@ pub const StructDef = struct {
         s.attributes.deinit(alloc);
     }
 };
+
+pub const VariableDef = struct {
+    mutable: bool,
+    ty: []const u8,
+};

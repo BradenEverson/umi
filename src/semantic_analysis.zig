@@ -15,11 +15,16 @@ pub const SemanticAnalysisError = error{
     TypeDoesNotExist,
     BinaryTypesDontAgree,
     InvalidFunctionArgumentType,
+    VariableAlreadyDefined,
+    VariableUsedBeforeDefine,
+    ImmutableVariableAssigned,
 };
+
+const NameResolveError = SemanticAnalysisError || Allocator.Error;
 
 /// Ensures all named types and functions actually exist in the
 /// context
-pub fn nameResolution(tl: *TopLevel) SemanticAnalysisError!void {
+pub fn nameResolution(alloc: Allocator, tl: *TopLevel) NameResolveError!void {
     // First, validate all function bodys, parameters, and return types
     var functions = tl.functions.iterator();
     while (functions.next()) |entry| {
@@ -36,7 +41,7 @@ pub fn nameResolution(tl: *TopLevel) SemanticAnalysisError!void {
             return SemanticAnalysisError.TypeDoesNotExist;
 
         for (function.body.ast.items) |ast| {
-            try nameResolveAst(tl, function, ast);
+            try nameResolveAst(alloc, tl, function, ast);
         }
     }
 
@@ -58,52 +63,53 @@ pub fn nameResolution(tl: *TopLevel) SemanticAnalysisError!void {
 }
 
 fn nameResolveAst(
+    alloc: Allocator,
     tl: *TopLevel,
-    function: *const parser.Function,
+    function: *parser.Function,
     expr: *const Expr,
-) SemanticAnalysisError!void {
+) NameResolveError!void {
     switch (expr.*) {
-        .return_val => |r| try nameResolveAst(tl, function, r),
+        .return_val => |r| try nameResolveAst(alloc, tl, function, r),
         .construction => |c| {
-            try nameResolveAst(tl, function, c.val);
+            try nameResolveAst(alloc, tl, function, c.val);
             if (tl.getType(c.ty) == null)
                 return SemanticAnalysisError.TypeDoesNotExist;
+
+            if (function.variableExists(c.name))
+                return SemanticAnalysisError.VariableAlreadyDefined;
+
+            try function.variables.put(alloc, c.name, .{
+                .mutable = c.mutable,
+                .ty = c.ty,
+            });
         },
         .assignment => |a| {
-            // TODO: We might need a local variable scope for the function?
-            // like a.name should not exist right now because it's a declaration
-            // although maybe this doesn't matter, just keeping this here so I
-            // remember we need to make a decision
-            try nameResolveAst(tl, function, a.val);
+            try nameResolveAst(alloc, tl, function, a.val);
+            if (!function.variableExists(a.name))
+                return SemanticAnalysisError.VariableUsedBeforeDefine;
+
+            const variable = function.variables.get(a.name).?;
+            if (!variable.mutable)
+                return SemanticAnalysisError.ImmutableVariableAssigned;
         },
         .variable => |v| {
-            _ = v;
-            // Yep okay, we DO need a local/global variable scope on the
-            // top level. We should ensure this variable exists and is
-            // declared BEFORE we make it to this step
-            //
-            // But actually, this will be solved during the next step, scope
-            // resolution
+            if (!function.variableExists(v))
+                return SemanticAnalysisError.VariableUsedBeforeDefine;
         },
         .binary_op => |b| {
-            try nameResolveAst(tl, function, b.left);
-            try nameResolveAst(tl, function, b.right);
+            try nameResolveAst(alloc, tl, function, b.left);
+            try nameResolveAst(alloc, tl, function, b.right);
         },
-        .unary_op => |u| try nameResolveAst(tl, function, u.expr),
+        .unary_op => |u| try nameResolveAst(alloc, tl, function, u.expr),
         .fn_call => |f| {
             if (tl.functions.get(f.name) == null)
                 return SemanticAnalysisError.FunctionDoesNotExist;
 
             for (f.arguments.items) |arg|
-                try nameResolveAst(tl, function, arg);
+                try nameResolveAst(alloc, tl, function, arg);
         },
         .literal => {},
     }
-}
-
-pub fn scopeResolve(alloc: Allocator, tl: *TopLevel) SemanticAnalysisError!void {
-    _ = alloc;
-    _ = tl;
 }
 
 pub fn typeCheck(tl: *TopLevel) SemanticAnalysisError!void {
