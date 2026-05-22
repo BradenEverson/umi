@@ -84,6 +84,12 @@ pub const TopLevel = struct {
 
 pub const Expr = union(enum) {
     assignment: struct { name: []const u8, val: *Expr },
+    construction: struct {
+        name: []const u8,
+        mutable: bool,
+        ty: []const u8,
+        val: *Expr,
+    },
     literal: Literal,
     variable: []const u8,
 
@@ -114,6 +120,10 @@ pub const Expr = union(enum) {
             .assignment => |a| {
                 a.val.deinit(alloc);
                 alloc.destroy(a.val);
+            },
+            .construction => |c| {
+                c.val.deinit(alloc);
+                alloc.destroy(c.val);
             },
             .unary_op => |u| {
                 u.expr.deinit(alloc);
@@ -338,17 +348,62 @@ pub fn statement(
     self: *Parser,
     alloc: Allocator,
 ) AnyParserError!*Expr {
-    if (self.peek() == .keyword and
-        self.peekTok().kw().? == .return_kw)
-    {
-        try self.consume(.keyword);
+    if (self.peek() == .keyword) {
+        switch (self.peekTok().kw().?) {
+            .return_kw => {
+                try self.consume(.keyword);
 
-        const expr = try self.expression(alloc);
-        try self.consume(.semicolon);
+                const expr = try self.expression(alloc);
+                try self.consume(.semicolon);
 
-        const ret = try alloc.create(Expr);
-        ret.* = .{ .return_val = expr };
-        return ret;
+                const ret = try alloc.create(Expr);
+                ret.* = .{ .return_val = expr };
+                return ret;
+            },
+
+            .let => {
+                try self.consume(.keyword);
+                // next token is either mut if variable is mutable, or ident for var name
+                var name = self.peekTok().data;
+                var mutable = false;
+
+                if (self.peek() == .keyword and
+                    self.peekTok().kw().? == .mut)
+                {
+                    mutable = true;
+                    try self.consume(.keyword);
+                    name = self.peekTok().data;
+                }
+
+                try self.consume(.ident);
+                try self.consume(.colon);
+
+                const ty = self.peekTok().data;
+                try self.consume(.ident);
+
+                try self.consume(.equals);
+                const value = try self.term(alloc);
+                try self.consume(.semicolon);
+
+                const construction = try alloc.create(Expr);
+                construction.* = .{
+                    .construction = .{
+                        .mutable = mutable,
+                        .name = name,
+                        .ty = ty,
+                        .val = value,
+                    },
+                };
+
+                return construction;
+            },
+
+            else => {
+                const expr = try self.expression(alloc);
+                try self.consume(.semicolon);
+                return expr;
+            },
+        }
     } else {
         const expr = try self.expression(alloc);
         try self.consume(.semicolon);
