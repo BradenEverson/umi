@@ -12,25 +12,44 @@ const Type = ts.Type;
 const StructDef = ts.StructDef;
 const VariableDef = ts.VariableDef;
 
-pub const Function = struct {
+pub const Scope = struct {
+    // PARENT IS NOT OWNED AND WILL NOT BE
+    // DEINITED BY CHILD, k thanks :)
+    parent: ?*Scope = null,
     variables: std.StringHashMapUnmanaged(VariableDef) = .empty,
+
+    /// Checks if variable exists within the current scope
+    pub fn variableExists(s: *const Scope, name: []const u8) bool {
+        const in_variables = s.variables.get(name) != null;
+        const in_parent = if (s.parent) |p| p.variableExists(name) else false;
+
+        return in_parent or in_variables;
+    }
+
+    pub fn deinit(self: *Scope, alloc: Allocator) void {
+        self.variables.deinit(alloc);
+    }
+};
+
+pub const Function = struct {
     parameters: std.StringHashMapUnmanaged([]const u8) = .empty,
+    scope: Scope = .{},
+
     returns: []const u8 = "void",
     body: Ast = .{},
 
     /// Checks if variable exists within the current scope
     pub fn variableExists(f: *const Function, name: []const u8) bool {
         const in_params = f.parameters.get(name) != null;
-        const in_variables = f.variables.get(name) != null;
+        const in_scope = f.scope.variableExists(name);
 
-        // TODO: Maybe a global scope should exist as well
-        return in_params or in_variables;
+        return in_params or in_scope;
     }
 
     pub fn deinit(f: *Function, alloc: Allocator) void {
         f.parameters.deinit(alloc);
         f.body.deinit(alloc);
-        f.variables.deinit(alloc);
+        f.scope.deinit(alloc);
     }
 };
 

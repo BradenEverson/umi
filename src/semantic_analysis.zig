@@ -79,7 +79,7 @@ fn nameResolveAst(
             if (function.variableExists(c.name))
                 return SemanticAnalysisError.VariableAlreadyDefined;
 
-            try function.variables.put(alloc, c.name, .{
+            try function.scope.variables.put(alloc, c.name, .{
                 .mutable = c.mutable,
                 .ty = c.ty,
             });
@@ -89,7 +89,7 @@ fn nameResolveAst(
             if (!function.variableExists(a.name))
                 return SemanticAnalysisError.VariableUsedBeforeDefine;
 
-            const variable = function.variables.get(a.name).?;
+            const variable = function.scope.variables.get(a.name).?;
             if (!variable.mutable)
                 return SemanticAnalysisError.ImmutableVariableAssigned;
         },
@@ -118,7 +118,9 @@ pub fn exprEvalsTo(tl: *TopLevel, scope: *parser.Function, expr: *const Expr) Ty
         // We can safely unwrap these optionals at this point because this
         // is assumed to run after the name resolution. We know these
         // variables all exist and the types of them must too
-        .variable => |v| return tl.getType(scope.variables.get(v).?.ty).?,
+        //
+        // TODO: Need parameters to show up here too
+        .variable => |v| return tl.getType(scope.scope.variables.get(v).?.ty).?,
 
         .fn_call => |f| return tl.types.get(
             tl.functions.get(f.name).?.returns,
@@ -163,7 +165,7 @@ test "variable type resolution" {
     var f: parser.Function = .{};
     defer f.deinit(std.testing.allocator);
 
-    try f.variables.put(
+    try f.scope.variables.put(
         std.testing.allocator,
         "A",
         .{
@@ -184,7 +186,7 @@ test "binary op type resolution" {
     var f: parser.Function = .{};
     defer f.deinit(std.testing.allocator);
 
-    try f.variables.put(
+    try f.scope.variables.put(
         std.testing.allocator,
         "A",
         .{
