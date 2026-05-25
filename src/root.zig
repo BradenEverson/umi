@@ -8,6 +8,7 @@ pub const parser = @import("parser.zig");
 pub const compiler = @import("compiler.zig");
 pub const semantic_analysis = @import("semantic_analysis.zig");
 pub const types = @import("type.zig");
+pub const optimizer = @import("optimizer.zig");
 
 test {
     _ = @import("compiler.zig");

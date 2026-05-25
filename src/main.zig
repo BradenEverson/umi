@@ -44,4 +44,6 @@ pub fn main(init: std.process.Init) !void {
 
     try umi.semantic_analysis.nameResolution(alloc, &tl);
     try umi.semantic_analysis.typeCheck(&tl);
+
+    try umi.optimizer.optimize(alloc, &tl);
 }
