@@ -34,13 +34,25 @@ pub const Scope = struct {
         return in_parent or in_variables;
     }
 
+    pub fn getVariable(
+        s: *const Scope,
+        name: []const u8,
+    ) ?VariableDef {
+        if (s.variables.get(name)) |v| return v;
+
+        if (s.parent) |p|
+            return p.getVariable(name);
+
+        return null;
+    }
+
     pub fn deinit(self: *Scope, alloc: Allocator) void {
         self.variables.deinit(alloc);
     }
 };
 
 pub const Function = struct {
-    parameters: std.StringHashMapUnmanaged([]const u8) = .empty,
+    parameters: std.ArrayList(struct { []const u8, []const u8 }) = .empty,
     scope: Scope = .{},
 
     returns: []const u8 = "void",
@@ -48,10 +60,9 @@ pub const Function = struct {
 
     /// Checks if variable exists within the current scope
     pub fn variableExists(f: *const Function, name: []const u8) bool {
-        const in_params = f.parameters.get(name) != null;
         const in_scope = f.scope.variableExists(name);
 
-        return in_params or in_scope;
+        return in_scope;
     }
 
     pub fn deinit(f: *Function, alloc: Allocator) void {
@@ -357,10 +368,12 @@ pub fn parse(
                     const param_ty = self.peekTok().data;
                     try self.consume(.ident);
 
-                    try func.parameters.put(
+                    try func.parameters.append(
                         alloc,
-                        param_name,
-                        param_ty,
+                        .{
+                            param_name,
+                            param_ty,
+                        },
                     );
                 }
                 try self.consume(.close_paren);

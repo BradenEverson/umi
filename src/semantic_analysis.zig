@@ -20,6 +20,7 @@ pub const SemanticAnalysisError = error{
     VariableAlreadyDefined,
     VariableUsedBeforeDefine,
     ImmutableVariableAssigned,
+    ArgumentsLenDoesNotMatchUp,
 };
 
 const NameResolveError = SemanticAnalysisError || Allocator.Error;
@@ -33,18 +34,17 @@ pub fn nameResolution(alloc: Allocator, tl: *TopLevel) NameResolveError!void {
         const function = entry.value_ptr;
 
         if (!functionReturns(function))
-            return error.FunctionDoesNotReturn;
+            return NameResolveError.FunctionDoesNotReturn;
 
-        var param_types = function.parameters.iterator();
-        while (param_types.next()) |param| {
-            if (tl.getType(param.value_ptr.*) == null)
+        for (function.parameters.items) |param| {
+            if (tl.getType(param.@"1") == null)
                 return SemanticAnalysisError.TypeDoesNotExist;
 
             try function.scope.variables.put(
                 alloc,
-                param.key_ptr.*,
+                param.@"0",
                 .{
-                    .ty = param.value_ptr.*,
+                    .ty = param.@"1",
                     .mutable = false,
                 },
             );
@@ -146,6 +146,10 @@ fn nameResolveAst(
 
             for (f.arguments.items) |arg|
                 try nameResolveAst(alloc, tl, function, arg);
+
+            const func = tl.functions.get(f.name).?;
+            if (func.parameters.items.len != f.arguments.items.len)
+                return SemanticAnalysisError.ArgumentsLenDoesNotMatchUp;
         },
         .literal => {},
     }
@@ -160,7 +164,7 @@ pub fn exprEvalsTo(tl: *TopLevel, scope: *parser.Function, expr: *const Expr) Ty
         // TODO: Need parameters to show up here too
         .variable => |v| return tl.getType(scope.scope.variables.get(v).?.ty).?,
 
-        .fn_call => |f| return tl.types.get(
+        .fn_call => |f| return tl.getType(
             tl.functions.get(f.name).?.returns,
         ).?,
 
@@ -194,18 +198,61 @@ pub fn exprEvalsTo(tl: *TopLevel, scope: *parser.Function, expr: *const Expr) Ty
 /// RETURN A STRUCT WITH DEFINITE TYPES INSTEAD OF LAZY
 /// STRINGS BUT OH WELL MAYBE THATS A TODO LETS JUST GET
 /// THIS DONE AND THEN WE CAN MAKE THIS RIGHT MKAY
-pub fn typeCheck(tl: *TopLevel) SemanticAnalysisError!void {
+pub fn typeCheck(tl: *TopLevel) TypeCheckError!void {
     var functions = tl.functions.iterator();
     while (functions.next()) |entry| {
         const function = entry.value_ptr;
 
         // we'll need this for checking any returns from
         // the fn
-        // const ret_type = tl.getType(function.returns).?;
+        const ret_type = tl.getType(function.returns).?;
+        for (function.body.ast.items) |expr|
+            try typeCheckExpr(tl, function, ret_type, expr);
+    }
+}
 
-        // Ensure return type exists:
-        if (tl.getType(function.returns) == null)
-            return SemanticAnalysisError.TypeDoesNotExist;
+pub fn typeCheckExpr(
+    tl: *TopLevel,
+    scope: *parser.Function,
+    fn_ret_ty: Type,
+    expr: *const Expr,
+) TypeCheckError!void {
+    switch (expr.*) {
+        .return_val => |r| {
+            const ret_resolved_type = try exprEvalsTo(tl, scope, r);
+            _ = try fn_ret_ty.agreesWith(ret_resolved_type);
+        },
+
+        .construction => |c| {
+            const expected_type = tl.getType(c.ty).?;
+            const actual_type = try exprEvalsTo(tl, scope, c.val);
+
+            _ = try expected_type.agreesWith(actual_type);
+        },
+
+        .assignment => |a| {
+            const variable = scope.scope.getVariable(a.name).?;
+            const variable_type = tl.getType(variable.ty).?;
+            const assignment_var = try exprEvalsTo(tl, scope, a.val);
+
+            _ = try variable_type.agreesWith(assignment_var);
+        },
+
+        .fn_call => |f| {
+            const func = tl.functions.get(f.name).?;
+
+            for (0..func.parameters.items.len) |i| {
+                const arg = f.arguments.items[i];
+                const param = func.parameters.items[i];
+
+                const arg_type = try exprEvalsTo(tl, scope, arg);
+                const param_type = tl.getType(param.@"1").?;
+
+                _ = try arg_type.agreesWith(param_type);
+            }
+        },
+
+        else => {},
     }
 }
 

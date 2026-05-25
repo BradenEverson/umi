@@ -16,6 +16,7 @@ const FloatDef = enum {
 
 pub const TypeCheckError = error{
     BinaryOpTypesDoNotAgree,
+    FunctionArgumentsDoNotAgree,
 };
 
 pub const Type = union(enum) {

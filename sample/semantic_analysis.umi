@@ -1,4 +1,4 @@
-fn foo() -> i32 {
+fn foo(a: u8) -> i32 {
     return 10;
 }
 
@@ -24,7 +24,7 @@ fn main() -> void {
     let mut a: u32 = 10;
     a = 9;
 
-    foo();
+    foo(1);
     bar();
 
     // Does not exist!
