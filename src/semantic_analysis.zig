@@ -35,6 +35,15 @@ pub fn nameResolution(alloc: Allocator, tl: *TopLevel) NameResolveError!void {
         while (param_types.next()) |param| {
             if (tl.getType(param.value_ptr.*) == null)
                 return SemanticAnalysisError.TypeDoesNotExist;
+
+            try function.scope.variables.put(
+                alloc,
+                param.key_ptr.*,
+                .{
+                    .ty = param.value_ptr.*,
+                    .mutable = false,
+                },
+            );
         }
 
         // Ensure return type exists:

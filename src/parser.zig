@@ -19,9 +19,17 @@ pub const Scope = struct {
     variables: std.StringHashMapUnmanaged(VariableDef) = .empty,
 
     /// Checks if variable exists within the current scope
-    pub fn variableExists(s: *const Scope, name: []const u8) bool {
-        const in_variables = s.variables.get(name) != null;
-        const in_parent = if (s.parent) |p| p.variableExists(name) else false;
+    pub fn variableExists(
+        s: *const Scope,
+        name: []const u8,
+    ) bool {
+        const in_variables =
+            s.variables.get(name) != null;
+
+        const in_parent = if (s.parent) |p|
+            p.variableExists(name)
+        else
+            false;
 
         return in_parent or in_variables;
     }
