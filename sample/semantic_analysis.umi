@@ -24,6 +24,11 @@ fn main() -> void {
     let mut a: u32 = 10;
     a = 9;
 
+    let b: u8 = 100;
+
+    // b = 10;
+    a = 100;
+
     foo(1);
     bar();
 
