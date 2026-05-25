@@ -3,6 +3,8 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
+const parser = @import("parser.zig");
+
 const IntDef = struct {
     signed: enum { signed, unsigned },
     bits: u16,
@@ -17,6 +19,7 @@ const FloatDef = enum {
 pub const TypeCheckError = error{
     BinaryOpTypesDoNotAgree,
     FunctionArgumentsDoNotAgree,
+    InvalidOpForType,
 };
 
 pub const Type = union(enum) {
@@ -31,6 +34,32 @@ pub const Type = union(enum) {
     its_a_pointer: *Type,
     slice: *Type,
     array: struct { ty: *Type, count: usize },
+
+    pub fn binaryOpIsValidForType(a: Type, op: parser.BinaryOp) bool {
+        switch (op) {
+            .sub, .add, .mul, .div, .gt, .lt => switch (a) {
+                .its_a_comptime_number,
+                .its_an_int,
+                .its_a_float,
+                => return true,
+                .its_a_struct => {
+                    // TODO: I like operator overloading,
+                    // so once structs can have methods,
+                    // maybe we search the method names
+                    // for an overloaded operator and
+                    // check for that to see if op
+                    // is valid.
+                    return false;
+                },
+                else => return false,
+            },
+
+            .eq => switch (a) {
+                .slice, .array, .its_a_struct => return false,
+                else => return true,
+            },
+        }
+    }
 
     pub fn agreesWith(a: Type, b: Type) TypeCheckError!Type {
         switch (a) {

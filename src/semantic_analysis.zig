@@ -239,6 +239,15 @@ pub fn typeCheckExpr(
             _ = try variable_type.agreesWith(assignment_var);
         },
 
+        .binary_op => |b| {
+            const left = try exprEvalsTo(tl, scope, b.left);
+            const right = try exprEvalsTo(tl, scope, b.right);
+
+            const result_ty = try left.agreesWith(right);
+            if (!result_ty.binaryOpIsValidForType(b.op))
+                return TypeCheckError.InvalidOpForType;
+        },
+
         .fn_call => |f| {
             const func = tl.functions.get(f.name).?;
 
