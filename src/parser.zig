@@ -207,16 +207,37 @@ pub const Expr = union(enum) {
     }
 };
 
-pub const Literal = union(enum) {
+pub const LiteralType = enum(u8) {
+    boolean,
+    uint,
+    int,
+    float,
+};
+
+pub const Literal = union(LiteralType) {
+    boolean: bool,
     uint: u64,
     int: i64,
     float: f64,
-    bool: bool,
+
+    /// Compares two literals for which should be converted to
+    /// what during a binary operation
+    pub fn dominantType(a: Literal, b: Literal) LiteralType {
+        const tag_a: LiteralType = a;
+        const tag_b: LiteralType = b;
+
+        return @enumFromInt(@max(
+            @intFromEnum(tag_a),
+            @intFromEnum(tag_b),
+        ));
+    }
+
+    // pub fn castTo(lit: Literal, to: LiteralType) Literal {}
 
     pub fn getType(self: Literal) Type {
         return switch (self) {
             .uint, .int, .float => .its_a_comptime_number,
-            .bool => .its_a_bool,
+            .boolean => .its_a_bool,
         };
     }
 };
@@ -685,12 +706,12 @@ fn literal(
         .keyword => switch (current_token.kw().?) {
             .true_kw => {
                 const literal_expr = try alloc.create(Expr);
-                literal_expr.* = .{ .literal = .{ .bool = true } };
+                literal_expr.* = .{ .literal = .{ .boolean = true } };
                 return literal_expr;
             },
             .false_kw => {
                 const literal_expr = try alloc.create(Expr);
-                literal_expr.* = .{ .literal = .{ .bool = false } };
+                literal_expr.* = .{ .literal = .{ .boolean = false } };
                 return literal_expr;
             },
             else => return ParserError.UnexpectedKeywordHere,
@@ -765,4 +786,13 @@ test "top level type parsing" {
     try std.testing.expectEqual(.float64, ty.its_a_float);
 
     try std.testing.expectEqual(null, tl.getType("f50"));
+}
+
+test "dominant literal" {
+    const a: Literal = .{ .float = 3.1 };
+    const b: Literal = .{ .uint = 32 };
+
+    const dom = a.dominantType(b);
+
+    try std.testing.expectEqual(.float, dom);
 }
