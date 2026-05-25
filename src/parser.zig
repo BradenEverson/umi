@@ -232,7 +232,34 @@ pub const Literal = union(LiteralType) {
         ));
     }
 
-    // pub fn castTo(lit: Literal, to: LiteralType) Literal {}
+    pub fn castTo(lit: Literal, to: LiteralType) ?Literal {
+        switch (to) {
+            .boolean => switch (lit) {
+                .boolean => return lit,
+                else => return null,
+            },
+
+            .uint => switch (lit) {
+                .boolean => |b| return .{ .uint = if (b) 1 else 0 },
+                .uint => return lit,
+                else => return null,
+            },
+
+            .int => switch (lit) {
+                .boolean => |b| return .{ .int = if (b) 1 else 0 },
+                .uint => |u| return .{ .int = @intCast(u) },
+                .int => return lit,
+                else => return null,
+            },
+
+            .float => switch (lit) {
+                .boolean => |b| return .{ .float = if (b) 1 else 0 },
+                .uint => |u| return .{ .float = @floatFromInt(u) },
+                .int => |i| return .{ .float = @floatFromInt(i) },
+                .float => return lit,
+            },
+        }
+    }
 
     pub fn getType(self: Literal) Type {
         return switch (self) {
@@ -789,10 +816,29 @@ test "top level type parsing" {
 }
 
 test "dominant literal" {
-    const a: Literal = .{ .float = 3.1 };
-    const b: Literal = .{ .uint = 32 };
-
-    const dom = a.dominantType(b);
-
+    var a: Literal = .{ .float = 3.1 };
+    var b: Literal = .{ .uint = 32 };
+    var dom = a.dominantType(b);
     try std.testing.expectEqual(.float, dom);
+
+    a = .{ .uint = 10 };
+    b = .{ .int = -5 };
+    dom = a.dominantType(b);
+    try std.testing.expectEqual(.int, dom);
+}
+
+test "typecasting literals" {
+    var a: Literal = .{ .boolean = true };
+    var b = a.castTo(.float).?;
+    try std.testing.expectEqual(1, b.float);
+
+    a = .{ .uint = 10 };
+    b = a.castTo(.int).?;
+    try std.testing.expectEqual(10, b.int);
+
+    a = .{ .float = 10 };
+    try std.testing.expectEqual(
+        null,
+        a.castTo(.int),
+    );
 }
