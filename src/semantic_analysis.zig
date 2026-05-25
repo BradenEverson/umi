@@ -185,8 +185,9 @@ pub fn exprEvalsTo(tl: *TopLevel, scope: *parser.Function, expr: *const Expr) Ty
     }
 }
 
-/// Checks each assignment and construction for valid typing on both sides
-/// also checks return statements from functions 🤓☝️
+/// Checks each assignment and construction for valid
+/// typing on both sides also checks return statements
+/// from functions 🤓☝️
 ///
 /// and and function parameters
 ///
@@ -263,7 +264,13 @@ test "type resolution" {
     var a: Expr = .{ .literal = .{ .int = 1 } };
     var b: Expr = .{ .literal = .{ .int = 2 } };
 
-    const apb: Expr = .{ .binary_op = .{ .left = &a, .right = &b, .op = .add } };
+    const apb: Expr = .{
+        .binary_op = .{
+            .left = &a,
+            .right = &b,
+            .op = .add,
+        },
+    };
 
     const ty = try exprEvalsTo(&tl, &f, &apb);
     try std.testing.expectEqual(.its_a_comptime_number, ty);
@@ -307,7 +314,11 @@ test "binary op type resolution" {
     var variable: Expr = .{ .variable = "A" };
     var constant: Expr = .{ .literal = .{ .int = 10 } };
 
-    const sum: Expr = .{ .binary_op = .{ .right = &variable, .left = &constant, .op = .add } };
+    const sum: Expr = .{ .binary_op = .{
+        .right = &variable,
+        .left = &constant,
+        .op = .add,
+    } };
     const ty = try exprEvalsTo(&tl, &f, &sum);
 
     try std.testing.expectEqual(.float16, ty.its_a_float);
