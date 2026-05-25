@@ -13,6 +13,7 @@ const Type = ts.Type;
 
 pub const SemanticAnalysisError = error{
     FunctionDoesNotExist,
+    FunctionDoesNotReturn,
     TypeDoesNotExist,
     BinaryTypesDontAgree,
     InvalidFunctionArgumentType,
@@ -30,6 +31,9 @@ pub fn nameResolution(alloc: Allocator, tl: *TopLevel) NameResolveError!void {
     var functions = tl.functions.iterator();
     while (functions.next()) |entry| {
         const function = entry.value_ptr;
+
+        if (!functionReturns(function))
+            return error.FunctionDoesNotReturn;
 
         var param_types = function.parameters.iterator();
         while (param_types.next()) |param| {
@@ -69,6 +73,31 @@ pub fn nameResolution(alloc: Allocator, tl: *TopLevel) NameResolveError!void {
             },
             else => {},
         }
+    }
+}
+
+// TODO: Also check all paths, right now we don't even
+// have branching capabilities so we'll just need to do this
+// later
+fn functionReturns(func: *const parser.Function) bool {
+    var valid = false;
+    if (std.mem.eql(u8, "void", func.returns)) return true;
+
+    for (func.body.ast.items) |expr| {
+        if (exprReturns(expr)) valid = true;
+    }
+
+    return valid;
+}
+
+fn exprReturns(expr: *const Expr) bool {
+    switch (expr.*) {
+        // This is simple for now, but we gotta keep in
+        // mind that blocks, if statements and loop
+        // constructs will need to call this recursively
+        // you feel
+        .return_val => return true,
+        else => return false,
     }
 }
 
@@ -152,8 +181,32 @@ pub fn exprEvalsTo(tl: *TopLevel, scope: *parser.Function, expr: *const Expr) Ty
     }
 }
 
+/// Checks each assignment and construction for valid typing on both sides
+/// also checks return statements from functions 🤓☝️
+///
+/// and and function parameters
+///
+/// THIS SHOULD BE RUN AFTER NAME RESOLUTION!!!!
+/// IT MAKES ASSUMPTIONS THAT EVERYTHING IS ALREADY
+/// VALIDATED
+///
+/// AND YES I KNOW I SHOULD PROBABLY HAVE NAME RESOLUTION
+/// RETURN A STRUCT WITH DEFINITE TYPES INSTEAD OF LAZY
+/// STRINGS BUT OH WELL MAYBE THATS A TODO LETS JUST GET
+/// THIS DONE AND THEN WE CAN MAKE THIS RIGHT MKAY
 pub fn typeCheck(tl: *TopLevel) SemanticAnalysisError!void {
-    _ = tl;
+    var functions = tl.functions.iterator();
+    while (functions.next()) |entry| {
+        const function = entry.value_ptr;
+
+        // we'll need this for checking any returns from
+        // the fn
+        // const ret_type = tl.getType(function.returns).?;
+
+        // Ensure return type exists:
+        if (tl.getType(function.returns) == null)
+            return SemanticAnalysisError.TypeDoesNotExist;
+    }
 }
 
 test "type resolution" {
