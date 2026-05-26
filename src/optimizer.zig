@@ -11,6 +11,9 @@ pub const OptimizeError = Allocator.Error;
 const cf = @import("optimizer/const_folding.zig");
 
 /// Runs all optimization passes over the ast
-pub fn optimize(alloc: Allocator, tl: *TopLevel) OptimizeError!void {
+pub fn optimize(
+    alloc: Allocator,
+    tl: *TopLevel,
+) OptimizeError!void {
     try cf.foldConsts(alloc, tl);
 }

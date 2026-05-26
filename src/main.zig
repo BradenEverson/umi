@@ -45,5 +45,15 @@ pub fn main(init: std.process.Init) !void {
     try umi.semantic_analysis.nameResolution(alloc, &tl);
     try umi.semantic_analysis.typeCheck(&tl);
 
+    std.debug.print("Before\n", .{});
+    for (tl.functions.get("main").?.body.ast.items) |expr| {
+        std.debug.print("{any}\n", .{expr});
+    }
+
     try umi.optimizer.optimize(alloc, &tl);
+
+    std.debug.print("After\n", .{});
+    for (tl.functions.get("main").?.body.ast.items) |expr| {
+        std.debug.print("{any}\n", .{expr});
+    }
 }
