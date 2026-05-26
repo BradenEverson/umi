@@ -46,7 +46,30 @@ pub fn comptimeBinOp(
     op: parser.BinaryOp,
 ) optimizer.OptimizeError!*Expr {
     _ = alloc;
-    _ = left;
-    _ = right;
-    _ = op;
+    const a, const b = left.getCompatible(right);
+    _ = b;
+
+    switch (op) {
+        .add => switch (a) {
+            else => unreachable,
+        },
+        .sub => switch (a) {
+            else => unreachable,
+        },
+        .div => switch (a) {
+            else => unreachable,
+        },
+        .eq => switch (a) {
+            else => unreachable,
+        },
+        .gt => switch (a) {
+            else => unreachable,
+        },
+        .lt => switch (a) {
+            else => unreachable,
+        },
+        .mul => switch (a) {
+            else => unreachable,
+        },
+    }
 }

@@ -23,6 +23,9 @@ struct A {
 fn main() -> void {
     let mut a: u32 = 10;
 
+    // let c: u32 = 10 == 10;
+    let d: bool = 10 == 10;
+
     // 10 + true;
     a = 9;
 

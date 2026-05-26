@@ -155,7 +155,11 @@ fn nameResolveAst(
     }
 }
 
-pub fn exprEvalsTo(tl: *TopLevel, scope: *parser.Function, expr: *const Expr) TypeCheckError!Type {
+pub fn exprEvalsTo(
+    tl: *TopLevel,
+    scope: *parser.Function,
+    expr: *const Expr,
+) TypeCheckError!Type {
     switch (expr.*) {
         // We can safely unwrap these optionals at this point because this
         // is assumed to run after the name resolution. We know these
@@ -173,7 +177,12 @@ pub fn exprEvalsTo(tl: *TopLevel, scope: *parser.Function, expr: *const Expr) Ty
             const left = try exprEvalsTo(tl, scope, b.left);
             const right = try exprEvalsTo(tl, scope, b.right);
 
-            return left.agreesWith(right);
+            const type_if_arithmetic = try left.agreesWith(right);
+
+            return switch (b.op) {
+                .eq, .lt, .gt => .its_a_bool,
+                else => type_if_arithmetic,
+            };
         },
 
         // TODO: This might not also be accurate, I just can't determine for sure rn

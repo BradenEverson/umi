@@ -232,6 +232,12 @@ pub const Literal = union(LiteralType) {
         ));
     }
 
+    pub fn getCompatible(a: Literal, b: Literal) struct { Literal, Literal } {
+        const ty = a.dominantType(b);
+
+        return .{ a.castTo(ty), b.castTo(ty) };
+    }
+
     pub fn castTo(lit: Literal, to: LiteralType) ?Literal {
         switch (to) {
             .boolean => switch (lit) {
@@ -274,6 +280,7 @@ pub const BinaryOp = enum {
     sub,
     mul,
     div,
+
     gt,
     lt,
     eq,
