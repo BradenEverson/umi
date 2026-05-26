@@ -157,7 +157,7 @@ pub const Expr = union(enum) {
     },
 
     unary_op: struct {
-        op: tokenizer.Keyword,
+        op: UnaryOp,
         expr: *Expr,
     },
 
@@ -284,6 +284,11 @@ pub const BinaryOp = enum {
     gt,
     lt,
     eq,
+};
+
+pub const UnaryOp = enum {
+    not,
+    neg,
 };
 
 pub const ParserError = error{
