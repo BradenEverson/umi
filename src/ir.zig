@@ -8,10 +8,10 @@ const TopLevel = parser.TopLevel;
 const Literal = parser.Literal;
 const BinaryOp = parser.BinaryOp;
 
-pub const Temp = u32;
+pub const Temp = usize;
 
 pub const Operand = union(enum) {
-    temp: Temp,
+    reference: Temp,
     literal: Literal,
     variable: []const u8,
 };

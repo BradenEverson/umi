@@ -35,6 +35,24 @@ pub const Type = union(enum) {
     slice: *Type,
     array: struct { ty: *Type, count: usize },
 
+    // pub fn sizeBytes(ty: Type) usize {
+    //     var bytes = 0;
+    //
+    //     switch (ty) {
+    //         .its_a_struct => |s| {},
+    //         .its_an_int => |i| {},
+    //         .its_a_float => |f| {},
+    //         .its_a_comptime_number => |c| {},
+    //         .its_void => |v| {},
+    //         .its_a_bool => |b| {},
+    //         .its_a_pointer => |p| {},
+    //         .slice => |s| {},
+    //         .array => |a| {},
+    //     }
+    //
+    //     return bytes;
+    // }
+
     pub fn binaryOpIsValidForType(a: Type, op: parser.BinaryOp) bool {
         switch (op) {
             .sub, .add, .mul, .div, .gt, .lt => switch (a) {
