@@ -43,10 +43,15 @@ pub const FunctionIR = struct {
 };
 
 pub const ProgramIR = struct {
-    functions: std.StringHashMapUnmanaged(FunctionIR) = .empty,
+    functions: std.StringHashMapUnmanaged(
+        FunctionIR,
+    ) = .empty,
 };
 
-pub fn genIr(alloc: Allocator, tl: *TopLevel) !ProgramIR {
+pub fn genIr(
+    alloc: Allocator,
+    tl: *TopLevel,
+) !ProgramIR {
     _ = alloc;
     _ = tl;
 }
