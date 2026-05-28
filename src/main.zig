@@ -46,9 +46,15 @@ pub fn main(init: std.process.Init) !void {
     try umi.semantic_analysis.typeCheck(&tl);
 
     try umi.optimizer.optimize(alloc, &tl);
-    const ir = try umi.ir_gen.genIr(alloc, &tl);
+    var ir = try umi.ir_gen.genIr(alloc, &tl);
+    defer ir.deinit(alloc);
 
-    for (ir.functions.get("main").?.instructions.items) |instr| {
+    var irtl: umi.ir_gen.IrTopLevel = .{
+        .types = tl.types,
+        .ir = ir,
+    };
+
+    for (irtl.ir.functions.get("main").?.instructions.items) |instr| {
         std.debug.print("{any}\n", .{instr});
     }
 }

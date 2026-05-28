@@ -7,10 +7,19 @@ const parser = @import("parser.zig");
 const TopLevel = parser.TopLevel;
 const Literal = parser.Literal;
 const BinaryOp = parser.BinaryOp;
+const Type = @import("type.zig").Type;
 
 pub const IrError = std.mem.Allocator.Error;
 
 pub const Temp = usize;
+
+/// The Top Level with functions translated to IR,
+/// neither fields are owned and should be deinit-ed
+/// separately
+pub const IrTopLevel = struct {
+    types: std.StringHashMapUnmanaged(Type) = .empty,
+    ir: ProgramIR,
+};
 
 pub const Operand = union(enum) {
     reference: Temp,
@@ -48,6 +57,13 @@ pub const ProgramIR = struct {
     functions: std.StringHashMapUnmanaged(
         FunctionIR,
     ) = .empty,
+
+    pub fn deinit(
+        ir: *ProgramIR,
+        alloc: Allocator,
+    ) void {
+        ir.functions.deinit(alloc);
+    }
 };
 
 pub fn genIr(
