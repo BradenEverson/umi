@@ -35,7 +35,7 @@ pub const Instruction = union(enum) {
 };
 
 pub const FunctionIR = struct {
-    instructions: std.ArrayList(Instruction),
+    instructions: std.ArrayList(Instruction) = .empty,
     temp_count: Temp = 0,
 
     pub fn freshTemp(self: *FunctionIR) Temp {
@@ -59,7 +59,10 @@ pub fn genIr(
 
     while (functions.next()) |function| {
         const function_ir =
-            try translateFunction(alloc, function.value_ptr);
+            try translateFunction(
+                alloc,
+                function.value_ptr,
+            );
 
         try program.functions.put(
             alloc,
@@ -75,6 +78,9 @@ pub fn translateFunction(
     alloc: Allocator,
     function: *parser.Function,
 ) IrError!FunctionIR {
+    const f: FunctionIR = .{};
     _ = alloc;
     _ = function;
+
+    return f;
 }
