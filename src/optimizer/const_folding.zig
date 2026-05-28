@@ -56,7 +56,7 @@ pub fn comptimeEval(
         },
         .return_val => |r| try comptimeEval(alloc, r),
 
-        else => {},
+        .literal, .variable => {},
     }
 }
 

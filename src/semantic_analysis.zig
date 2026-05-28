@@ -71,7 +71,14 @@ pub fn nameResolution(alloc: Allocator, tl: *TopLevel) NameResolveError!void {
                         return SemanticAnalysisError.TypeDoesNotExist;
                 }
             },
-            else => {},
+            .array => {},
+            .its_a_float => {},
+            .its_a_pointer => {},
+            .its_an_int => {},
+            .slice => {},
+            .its_a_bool => {},
+            .its_a_comptime_number => {},
+            .its_void => {},
         }
     }
 }
@@ -97,7 +104,7 @@ fn exprReturns(expr: *const Expr) bool {
         // constructs will need to call this recursively
         // you feel
         .return_val => return true,
-        else => return false,
+        .assignment, .binary_op, .construction, .fn_call, .literal, .unary_op, .variable => return false,
     }
 }
 
@@ -270,8 +277,7 @@ pub fn typeCheckExpr(
                 _ = try arg_type.agreesWith(param_type);
             }
         },
-
-        else => {},
+        .variable, .unary_op, .literal => {},
     }
 }
 

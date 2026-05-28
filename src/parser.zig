@@ -203,7 +203,7 @@ pub const Expr = union(enum) {
                 f.arguments.deinit(alloc);
             },
 
-            else => {},
+            .literal, .variable => {},
         }
     }
 };
