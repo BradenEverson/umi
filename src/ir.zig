@@ -8,6 +8,8 @@ const TopLevel = parser.TopLevel;
 const Literal = parser.Literal;
 const BinaryOp = parser.BinaryOp;
 
+pub const IrError = std.mem.Allocator.Error;
+
 pub const Temp = usize;
 
 pub const Operand = union(enum) {
@@ -51,7 +53,28 @@ pub const ProgramIR = struct {
 pub fn genIr(
     alloc: Allocator,
     tl: *TopLevel,
-) !ProgramIR {
+) IrError!ProgramIR {
+    var program: ProgramIR = .{};
+    var functions = tl.functions.iterator();
+
+    while (functions.next()) |function| {
+        const function_ir =
+            try translateFunction(alloc, function.value_ptr);
+
+        try program.functions.put(
+            alloc,
+            function.key_ptr.*,
+            function_ir,
+        );
+    }
+
+    return program;
+}
+
+pub fn translateFunction(
+    alloc: Allocator,
+    function: *parser.Function,
+) IrError!FunctionIR {
     _ = alloc;
-    _ = tl;
+    _ = function;
 }

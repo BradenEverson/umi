@@ -1,4 +1,5 @@
-//! The parsing step :D makes a good ol' ast from our existing token stream
+//! The parsing step :D makes a good ol' ast from
+//! our existing token stream
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;

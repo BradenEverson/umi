@@ -1,4 +1,5 @@
-//! Single step for walking a chain of optimization steps that are registered here
+//! Single step for walking a chain of optimization
+//! steps that are registered here
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
