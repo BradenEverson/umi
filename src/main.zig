@@ -46,6 +46,7 @@ pub fn main(init: std.process.Init) !void {
     try umi.semantic_analysis.typeCheck(&tl);
 
     try umi.optimizer.optimize(alloc, &tl);
+
     var ir = try umi.ir_gen.genIr(alloc, &tl);
     defer ir.deinit(alloc);
 

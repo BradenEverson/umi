@@ -77,6 +77,7 @@ pub fn genIr(
         const function_ir =
             try translateFunction(
                 alloc,
+                tl,
                 function.value_ptr,
             );
 
@@ -92,11 +93,23 @@ pub fn genIr(
 
 pub fn translateFunction(
     alloc: Allocator,
+    tl: *TopLevel,
     function: *parser.Function,
 ) IrError!FunctionIR {
     const f: FunctionIR = .{};
-    _ = alloc;
-    _ = function;
+
+    for (function.body.ast.items) |expr|
+        try exprToIr(alloc, expr, tl);
 
     return f;
+}
+
+pub fn exprToIr(
+    alloc: Allocator,
+    expr: *parser.Expr,
+    tl: *TopLevel,
+) IrError!void {
+    _ = alloc;
+    _ = expr;
+    _ = tl;
 }
