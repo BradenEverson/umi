@@ -8,6 +8,8 @@ const parser = @import("parser.zig");
 const TopLevel = parser.TopLevel;
 const Literal = parser.Literal;
 const BinaryOp = parser.BinaryOp;
+const UnaryOp = parser.UnaryOp;
+
 const Type = @import("type.zig").Type;
 
 pub const IrError = std.mem.Allocator.Error;
@@ -29,31 +31,26 @@ pub const Operand = union(enum) {
     variable: []const u8,
 };
 
-pub const Instruction = union(enum) {
-    bin_op: struct {
-        dest: Temp,
-        lhs: Operand,
-        op: BinaryOp,
-        rhs: Operand,
-    },
-    copy: struct { dest: Temp, src: Operand },
-    ret: struct { val: Operand },
-    call: struct {
-        dest: ?Temp,
-        name: []const u8,
-        args: std.ArrayList(Operand),
-    },
+pub const ThreeAddressCode = struct {
+    op: Operator,
+    arg1: Operand,
+    arg2: Operand,
+};
+
+pub const Operator = union(enum) {
+    binary_op: BinaryOp,
+    unary_op: UnaryOp,
+
+    assignment,
+    return_something,
+
+    call_fn: []const u8,
+    load_arg: usize,
 };
 
 pub const FunctionIR = struct {
-    instructions: std.ArrayList(Instruction) =
+    instructions: std.ArrayList(ThreeAddressCode) =
         .empty,
-    temp_count: Temp = 0,
-
-    pub fn freshTemp(self: *FunctionIR) Temp {
-        defer self.temp_count += 1;
-        return self.temp_count;
-    }
 };
 
 pub const ProgramIR = struct {
@@ -65,6 +62,10 @@ pub const ProgramIR = struct {
         ir: *ProgramIR,
         alloc: Allocator,
     ) void {
+        var functions = ir.functions.iterator();
+        while (functions.next()) |function|
+            function.value_ptr.instructions.deinit(alloc);
+
         ir.functions.deinit(alloc);
     }
 };
@@ -99,10 +100,10 @@ pub fn translateFunction(
     tl: *TopLevel,
     function: *parser.Function,
 ) IrError!FunctionIR {
-    const f: FunctionIR = .{};
+    var f: FunctionIR = .{};
 
     for (function.body.ast.items) |expr|
-        try exprToIr(alloc, expr, tl);
+        _ = try exprToIr(alloc, expr, tl, &f);
 
     return f;
 }
@@ -111,8 +112,136 @@ pub fn exprToIr(
     alloc: Allocator,
     expr: *parser.Expr,
     tl: *TopLevel,
-) IrError!void {
-    _ = alloc;
-    _ = expr;
-    _ = tl;
+    function: *FunctionIR,
+) IrError!Operand {
+    switch (expr.*) {
+        .binary_op => |b| {
+            const left = try exprToIr(
+                alloc,
+                b.left,
+                tl,
+                function,
+            );
+            const right = try exprToIr(
+                alloc,
+                b.right,
+                tl,
+                function,
+            );
+
+            const code = ThreeAddressCode{
+                .op = .{ .binary_op = b.op },
+                .arg1 = left,
+                .arg2 = right,
+            };
+            try function.instructions.append(alloc, code);
+
+            return Operand{
+                .reference = function.instructions.items.len - 1,
+            };
+        },
+        .unary_op => |u| {
+            const val = try exprToIr(
+                alloc,
+                u.expr,
+                tl,
+                function,
+            );
+            const code = ThreeAddressCode{
+                .op = .{ .unary_op = u.op },
+                .arg1 = val,
+                .arg2 = undefined,
+            };
+            try function.instructions.append(alloc, code);
+
+            return Operand{
+                .reference = function.instructions.items.len - 1,
+            };
+        },
+        .assignment => |a| {
+            const val = try exprToIr(
+                alloc,
+                a.val,
+                tl,
+                function,
+            );
+
+            const code: ThreeAddressCode = .{
+                .op = .assignment,
+                .arg1 = .{ .variable = a.name },
+                .arg2 = val,
+            };
+            try function.instructions.append(alloc, code);
+            return Operand{
+                .reference = function.instructions
+                    .items.len - 1,
+            };
+        },
+        .construction => |c| {
+            const val = try exprToIr(
+                alloc,
+                c.val,
+                tl,
+                function,
+            );
+
+            const code: ThreeAddressCode = .{
+                .op = .assignment,
+                .arg1 = .{ .variable = c.name },
+                .arg2 = val,
+            };
+            try function.instructions.append(alloc, code);
+            return Operand{
+                .reference = function.instructions
+                    .items.len - 1,
+            };
+        },
+        .variable => |v| return Operand{ .variable = v },
+        .literal => |l| return Operand{ .literal = l },
+
+        .fn_call => |f| {
+            for (f.arguments.items, 0..) |arg, i| {
+                const val = try exprToIr(
+                    alloc,
+                    arg,
+                    tl,
+                    function,
+                );
+
+                const load_arg = ThreeAddressCode{
+                    .op = .{ .load_arg = i },
+                    .arg1 = val,
+                    .arg2 = undefined,
+                };
+                try function.instructions.append(alloc, load_arg);
+            }
+
+            const fn_call = ThreeAddressCode{
+                .op = .{ .call_fn = f.name },
+                .arg1 = undefined,
+                .arg2 = undefined,
+            };
+
+            try function.instructions.append(alloc, fn_call);
+            return Operand{
+                .reference = function.instructions
+                    .items.len - 1,
+            };
+        },
+
+        .return_val => |r| {
+            const ret = try exprToIr(alloc, r, tl, function);
+            const code: ThreeAddressCode = .{
+                .op = .return_something,
+                .arg1 = ret,
+                .arg2 = undefined,
+            };
+
+            try function.instructions.append(alloc, code);
+            return Operand{
+                .reference = function.instructions
+                    .items.len - 1,
+            };
+        },
+    }
 }
