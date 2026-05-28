@@ -29,6 +29,8 @@ pub const Operand = union(enum) {
     reference: Temp,
     literal: Literal,
     variable: []const u8,
+    fn_name: []const u8,
+    int: usize,
 };
 
 pub const ThreeAddressCode = struct {
@@ -44,8 +46,8 @@ pub const Operator = union(enum) {
     assignment,
     return_something,
 
-    call_fn: []const u8,
-    load_arg: usize,
+    call_fn,
+    load_arg,
 };
 
 pub const FunctionIR = struct {
@@ -209,17 +211,17 @@ pub fn exprToIr(
                 );
 
                 const load_arg = ThreeAddressCode{
-                    .op = .{ .load_arg = i },
-                    .arg1 = val,
-                    .arg2 = undefined,
+                    .op = .load_arg,
+                    .arg1 = .{ .int = i },
+                    .arg2 = val,
                 };
                 try function.instructions.append(alloc, load_arg);
             }
 
             const fn_call = ThreeAddressCode{
-                .op = .{ .call_fn = f.name },
-                .arg1 = undefined,
-                .arg2 = undefined,
+                .op = .call_fn,
+                .arg1 = .{ .fn_name = f.name },
+                .arg2 = .{ .int = f.arguments.items.len },
             };
 
             try function.instructions.append(alloc, fn_call);
