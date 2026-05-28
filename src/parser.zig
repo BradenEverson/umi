@@ -134,7 +134,10 @@ pub const TopLevel = struct {
 };
 
 pub const Expr = union(enum) {
-    assignment: struct { name: []const u8, val: *Expr },
+    assignment: struct {
+        name: []const u8,
+        val: *Expr,
+    },
     construction: struct {
         name: []const u8,
         mutable: bool,
@@ -148,7 +151,8 @@ pub const Expr = union(enum) {
 
     fn_call: struct {
         name: []const u8,
-        arguments: std.ArrayList(*Expr) = .empty,
+        arguments: std.ArrayList(*Expr) =
+            .empty,
     },
 
     binary_op: struct {
@@ -162,11 +166,16 @@ pub const Expr = union(enum) {
         expr: *Expr,
     },
 
-    /// Deinits while assuming child expressions are also allocated
-    /// with the same allocator, destroys them.
+    /// Deinits while assuming child expressions
+    /// are also allocated with the same allocator,
+    /// destroys them.
     ///
-    /// TODO: Maybe this is better for an arena, who knows
-    pub fn deinit(self: *Expr, alloc: Allocator) void {
+    /// TODO: Maybe this is better for an arena,
+    /// who knows
+    pub fn deinit(
+        self: *Expr,
+        alloc: Allocator,
+    ) void {
         switch (self.*) {
             .assignment => |a| {
                 a.val.deinit(alloc);
@@ -221,9 +230,12 @@ pub const Literal = union(LiteralType) {
     int: i64,
     float: f64,
 
-    /// Compares two literals for which should be converted to
-    /// what during a binary operation
-    pub fn dominantType(a: Literal, b: Literal) LiteralType {
+    /// Compares two literals for which should be
+    /// converted to what during a binary operation
+    pub fn dominantType(
+        a: Literal,
+        b: Literal,
+    ) LiteralType {
         const tag_a: LiteralType = a;
         const tag_b: LiteralType = b;
 
@@ -233,13 +245,22 @@ pub const Literal = union(LiteralType) {
         ));
     }
 
-    pub fn getCompatible(a: Literal, b: Literal) struct { Literal, Literal } {
+    pub fn getCompatible(
+        a: Literal,
+        b: Literal,
+    ) struct { Literal, Literal } {
         const ty = a.dominantType(b);
 
-        return .{ a.castTo(ty).?, b.castTo(ty).? };
+        return .{
+            a.castTo(ty).?,
+            b.castTo(ty).?,
+        };
     }
 
-    pub fn castTo(lit: Literal, to: LiteralType) ?Literal {
+    pub fn castTo(
+        lit: Literal,
+        to: LiteralType,
+    ) ?Literal {
         switch (to) {
             .boolean => switch (lit) {
                 .boolean => return lit,
@@ -247,22 +268,34 @@ pub const Literal = union(LiteralType) {
             },
 
             .uint => switch (lit) {
-                .boolean => |b| return .{ .uint = if (b) 1 else 0 },
+                .boolean => |b| return .{
+                    .uint = if (b) 1 else 0,
+                },
                 .uint => return lit,
                 else => return null,
             },
 
             .int => switch (lit) {
-                .boolean => |b| return .{ .int = if (b) 1 else 0 },
-                .uint => |u| return .{ .int = @intCast(u) },
+                .boolean => |b| return .{
+                    .int = if (b) 1 else 0,
+                },
+                .uint => |u| return .{
+                    .int = @intCast(u),
+                },
                 .int => return lit,
                 else => return null,
             },
 
             .float => switch (lit) {
-                .boolean => |b| return .{ .float = if (b) 1 else 0 },
-                .uint => |u| return .{ .float = @floatFromInt(u) },
-                .int => |i| return .{ .float = @floatFromInt(i) },
+                .boolean => |b| return .{
+                    .float = if (b) 1 else 0,
+                },
+                .uint => |u| return .{
+                    .float = @floatFromInt(u),
+                },
+                .int => |i| return .{
+                    .float = @floatFromInt(i),
+                },
                 .float => return lit,
             },
         }
@@ -270,7 +303,11 @@ pub const Literal = union(LiteralType) {
 
     pub fn getType(self: Literal) Type {
         return switch (self) {
-            .uint, .int, .float => .its_a_comptime_number,
+            .uint,
+            .int,
+            .float,
+            => .its_a_comptime_number,
+
             .boolean => .its_a_bool,
         };
     }
@@ -304,7 +341,10 @@ pub const ParserError = error{
 pub const Ast = struct {
     ast: std.ArrayList(*Expr) = .empty,
 
-    pub fn deinit(self: *Ast, alloc: Allocator) void {
+    pub fn deinit(
+        self: *Ast,
+        alloc: Allocator,
+    ) void {
         for (self.ast.items) |a| {
             a.deinit(alloc);
             alloc.destroy(a);
@@ -336,7 +376,10 @@ fn peek(self: *const Parser) TokenTag {
     return self.tokens[self.cursor].tag;
 }
 
-fn peekN(self: *const Parser, n: comptime_int) TokenTag {
+fn peekN(
+    self: *const Parser,
+    n: comptime_int,
+) TokenTag {
     if (self.cursor + n >= self.tokens.len) {
         return .eof;
     }
@@ -349,7 +392,10 @@ fn advance(self: *Parser) void {
     }
 }
 
-fn consume(self: *Parser, tok: TokenTag) ParserError!void {
+fn consume(
+    self: *Parser,
+    tok: TokenTag,
+) ParserError!void {
     if (self.peek() == tok) {
         self.advance();
         return;
@@ -368,7 +414,9 @@ pub fn parse(
     tl: *TopLevel,
 ) AnyParserError!void {
     while (!self.at_end()) {
-        const top_level_token_ident = self.peekTok();
+        const top_level_token_ident =
+            self.peekTok();
+
         try self.consume(.keyword);
 
         const kw = tokenizer.KeywordLookup
@@ -379,18 +427,23 @@ pub fn parse(
                 var struct_def: StructDef = .{};
                 errdefer struct_def.deinit(alloc);
 
-                const struct_name = self.peekTok().data;
+                const struct_name = self
+                    .peekTok().data;
                 try self.consume(.ident);
 
                 try self.consume(.open_brace);
 
                 while (self.peek() != .close_brace) {
-                    const attr_name = self.peekTok().data;
+                    const attr_name = self
+                        .peekTok().data;
+
                     try self.consume(.ident);
 
                     try self.consume(.colon);
 
-                    const attr_type = self.peekTok().data;
+                    const attr_type = self
+                        .peekTok().data;
+
                     try self.consume(.ident);
 
                     try self.consume(.comma);
@@ -421,12 +474,16 @@ pub fn parse(
 
                 // Start parsing out the parameters
                 while (self.peek() != .close_paren) {
-                    const param_name = self.peekTok().data;
+                    const param_name = self
+                        .peekTok().data;
+
                     try self.consume(.ident);
 
                     try self.consume(.colon);
 
-                    const param_ty = self.peekTok().data;
+                    const param_ty = self
+                        .peekTok().data;
+
                     try self.consume(.ident);
 
                     try func.parameters.append(
@@ -450,16 +507,26 @@ pub fn parse(
                 try self.consume(.open_brace);
 
                 while (self.peek() != .close_brace) {
-                    const expr = try self.statement(alloc);
-                    try func.body.ast.append(alloc, expr);
+                    const expr = try self
+                        .statement(alloc);
+
+                    try func.body.ast.append(
+                        alloc,
+                        expr,
+                    );
                 }
 
                 try self.consume(.close_brace);
 
-                try tl.functions.put(alloc, fn_name, func);
+                try tl.functions.put(
+                    alloc,
+                    fn_name,
+                    func,
+                );
             },
 
-            else => return ParserError.InvalidTopLevelStart,
+            else => return ParserError
+                .InvalidTopLevelStart,
         }
     }
 }
@@ -473,7 +540,9 @@ pub fn statement(
             .return_kw => {
                 try self.consume(.keyword);
 
-                const expr = try self.expression(alloc);
+                const expr = try self
+                    .expression(alloc);
+
                 try self.consume(.semicolon);
 
                 const ret = try alloc.create(Expr);
@@ -483,7 +552,10 @@ pub fn statement(
 
             .let => {
                 try self.consume(.keyword);
-                // next token is either mut if variable is mutable, or ident for var name
+                // next token is either mut if
+                // variable is mutable, or ident
+                // for var name
+
                 var name = self.peekTok().data;
                 var mutable = false;
 
@@ -505,7 +577,9 @@ pub fn statement(
                 const value = try self.term(alloc);
                 try self.consume(.semicolon);
 
-                const construction = try alloc.create(Expr);
+                const construction = try alloc
+                    .create(Expr);
+
                 construction.* = .{
                     .construction = .{
                         .mutable = mutable,
@@ -519,7 +593,8 @@ pub fn statement(
             },
 
             else => {
-                const expr = try self.expression(alloc);
+                const expr = try self
+                    .expression(alloc);
                 try self.consume(.semicolon);
                 return expr;
             },
@@ -535,14 +610,18 @@ pub fn expression(
     self: *Parser,
     alloc: Allocator,
 ) AnyParserError!*Expr {
-    if (self.peek() == .ident and self.peekN(1) == .equals) {
+    if (self.peek() == .ident and
+        self.peekN(1) == .equals)
+    {
         const name = self.tokens[self.cursor].data;
         self.advance();
         self.advance();
 
         const val = try self.term(alloc);
 
-        const assignment_expr = try alloc.create(Expr);
+        const assignment_expr = try alloc
+            .create(Expr);
+
         assignment_expr.* = .{
             .assignment = .{
                 .name = name,
@@ -574,7 +653,9 @@ fn term(
             else => unreachable,
         };
 
-        const binary_op_expr = try alloc.create(Expr);
+        const binary_op_expr = try alloc
+            .create(Expr);
+
         binary_op_expr.* = .{
             .binary_op = .{
                 .left = left,
@@ -609,7 +690,9 @@ fn comparison(
             else => unreachable,
         };
 
-        const binary_op_expr = try alloc.create(Expr);
+        const binary_op_expr = try alloc
+            .create(Expr);
+
         binary_op_expr.* = .{
             .binary_op = .{
                 .left = left,
@@ -643,7 +726,9 @@ fn factor(
             else => unreachable,
         };
 
-        const binary_op_expr = try alloc.create(Expr);
+        const binary_op_expr = try alloc
+            .create(Expr);
+
         binary_op_expr.* = .{
             .binary_op = .{
                 .left = left,
@@ -661,7 +746,9 @@ fn power(
     self: *Parser,
     alloc: Allocator,
 ) AnyParserError!*Expr {
-    const left = try self.primary(alloc);
+    const left = try self
+        .primary(alloc);
+
     return left;
 }
 
@@ -678,7 +765,9 @@ fn primary(
 
             if (self.peek() == .open_paren) {
                 // We're a function call!!!
-                const func_call = try alloc.create(Expr);
+                const func_call = try alloc
+                    .create(Expr);
+
                 func_call.* = .{
                     .fn_call = .{
                         .name = current_token.data,
@@ -687,7 +776,8 @@ fn primary(
 
                 self.advance();
                 while (self.peek() != .close_paren) {
-                    const arg = try self.term(alloc);
+                    const arg = try self
+                        .term(alloc);
 
                     try func_call.fn_call.arguments
                         .append(alloc, arg);
@@ -701,7 +791,9 @@ fn primary(
                 expr = func_call;
             } else {
                 // We're just a variable reference
-                const variable_expr = try alloc.create(Expr);
+                const variable_expr = try alloc
+                    .create(Expr);
+
                 variable_expr.* = .{
                     .variable = current_token.data,
                 };
@@ -739,22 +831,33 @@ fn literal(
                 10,
             );
 
-            const literal_expr = try alloc.create(Expr);
-            literal_expr.* = .{ .literal = .{ .uint = number_val } };
+            const literal_expr = try alloc
+                .create(Expr);
+
+            literal_expr.* = .{
+                .literal = .{ .uint = number_val },
+            };
             return literal_expr;
         },
         .keyword => switch (current_token.kw().?) {
             .true_kw => {
-                const literal_expr = try alloc.create(Expr);
-                literal_expr.* = .{ .literal = .{ .boolean = true } };
+                const literal_expr = try alloc
+                    .create(Expr);
+                literal_expr.* = .{
+                    .literal = .{ .boolean = true },
+                };
                 return literal_expr;
             },
             .false_kw => {
-                const literal_expr = try alloc.create(Expr);
-                literal_expr.* = .{ .literal = .{ .boolean = false } };
+                const literal_expr = try alloc
+                    .create(Expr);
+                literal_expr.* = .{
+                    .literal = .{ .boolean = false },
+                };
                 return literal_expr;
             },
-            else => return ParserError.UnexpectedKeywordHere,
+            else => return ParserError
+                .UnexpectedKeywordHere,
         },
         else => {
             return ParserError.UnexpectedToken;
@@ -802,13 +905,25 @@ test "top level type parsing" {
 
     var ty = tl.getType("u31").?;
 
-    try std.testing.expectEqual(.unsigned, ty.its_an_int.signed);
-    try std.testing.expectEqual(31, ty.its_an_int.bits);
+    try std.testing.expectEqual(
+        .unsigned,
+        ty.its_an_int.signed,
+    );
+    try std.testing.expectEqual(
+        31,
+        ty.its_an_int.bits,
+    );
 
     ty = tl.getType("i5").?;
 
-    try std.testing.expectEqual(.signed, ty.its_an_int.signed);
-    try std.testing.expectEqual(5, ty.its_an_int.bits);
+    try std.testing.expectEqual(
+        .signed,
+        ty.its_an_int.signed,
+    );
+    try std.testing.expectEqual(
+        5,
+        ty.its_an_int.bits,
+    );
 
     ty = tl.getType("void").?;
     try std.testing.expectEqual(.its_void, ty);
@@ -817,15 +932,27 @@ test "top level type parsing" {
     try std.testing.expectEqual(.its_a_bool, ty);
 
     ty = tl.getType("f16").?;
-    try std.testing.expectEqual(.float16, ty.its_a_float);
+    try std.testing.expectEqual(
+        .float16,
+        ty.its_a_float,
+    );
 
     ty = tl.getType("f32").?;
-    try std.testing.expectEqual(.float32, ty.its_a_float);
+    try std.testing.expectEqual(
+        .float32,
+        ty.its_a_float,
+    );
 
     ty = tl.getType("f64").?;
-    try std.testing.expectEqual(.float64, ty.its_a_float);
+    try std.testing.expectEqual(
+        .float64,
+        ty.its_a_float,
+    );
 
-    try std.testing.expectEqual(null, tl.getType("f50"));
+    try std.testing.expectEqual(
+        null,
+        tl.getType("f50"),
+    );
 }
 
 test "dominant literal" {

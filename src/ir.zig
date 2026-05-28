@@ -1,4 +1,5 @@
-//! Walks the AST to translate into an IR, using three address codes (TAC!)
+//! Walks the AST to translate into an IR,
+//! using three address codes (TAC!)
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
@@ -17,7 +18,8 @@ pub const Temp = usize;
 /// neither fields are owned and should be deinit-ed
 /// separately
 pub const IrTopLevel = struct {
-    types: std.StringHashMapUnmanaged(Type) = .empty,
+    types: std.StringHashMapUnmanaged(Type) =
+        .empty,
     ir: ProgramIR,
 };
 
@@ -44,7 +46,8 @@ pub const Instruction = union(enum) {
 };
 
 pub const FunctionIR = struct {
-    instructions: std.ArrayList(Instruction) = .empty,
+    instructions: std.ArrayList(Instruction) =
+        .empty,
     temp_count: Temp = 0,
 
     pub fn freshTemp(self: *FunctionIR) Temp {

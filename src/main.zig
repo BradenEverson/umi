@@ -16,14 +16,18 @@ pub fn main(init: std.process.Init) !void {
     var source: []u8 = undefined;
 
     if (args.next()) |file_path| {
-        source = try std.Io.Dir.cwd().readFileAlloc(
+        source = try std.Io.Dir.cwd()
+            .readFileAlloc(
             io,
             file_path,
             alloc,
             .unlimited,
         );
     } else {
-        std.debug.print("Missing source code!!!\n", .{});
+        std.debug.print(
+            "Missing source code!!!\n",
+            .{},
+        );
         std.process.exit(1);
     }
 
@@ -32,17 +36,26 @@ pub fn main(init: std.process.Init) !void {
     var tokens: std.ArrayList(Token) = .empty;
     defer tokens.deinit(alloc);
 
-    try umi.tokenizer.tokenize(source, &tokens, alloc);
+    try umi.tokenizer.tokenize(
+        source,
+        &tokens,
+        alloc,
+    );
 
     var tl: TopLevel = .{};
     defer tl.deinit(alloc);
 
     try tl.initTypes(alloc);
 
-    var parser: umi.parser = .{ .tokens = tokens.items };
+    var parser: umi.parser = .{
+        .tokens = tokens.items,
+    };
     try parser.parse(alloc, &tl);
 
-    try umi.semantic_analysis.nameResolution(alloc, &tl);
+    try umi.semantic_analysis.nameResolution(
+        alloc,
+        &tl,
+    );
     try umi.semantic_analysis.typeCheck(&tl);
 
     try umi.optimizer.optimize(alloc, &tl);
@@ -55,7 +68,9 @@ pub fn main(init: std.process.Init) !void {
         .ir = ir,
     };
 
-    for (irtl.ir.functions.get("main").?.instructions.items) |instr| {
+    for (irtl.ir.functions.get("main").?
+        .instructions.items) |instr|
+    {
         std.debug.print("{any}\n", .{instr});
     }
 }

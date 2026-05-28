@@ -23,22 +23,29 @@ pub const SemanticAnalysisError = error{
     ArgumentsLenDoesNotMatchUp,
 };
 
-const NameResolveError = SemanticAnalysisError || Allocator.Error;
+const NameResolveError = SemanticAnalysisError ||
+    Allocator.Error;
 
-/// Ensures all named types and functions actually exist in the
-/// context
-pub fn nameResolution(alloc: Allocator, tl: *TopLevel) NameResolveError!void {
-    // First, validate all function bodys, parameters, and return types
+/// Ensures all named types and functions
+/// actually exist in the context
+pub fn nameResolution(
+    alloc: Allocator,
+    tl: *TopLevel,
+) NameResolveError!void {
+    // First, validate all function bodys,
+    // parameters, and return types
     var functions = tl.functions.iterator();
     while (functions.next()) |entry| {
         const function = entry.value_ptr;
 
         if (!functionReturns(function))
-            return NameResolveError.FunctionDoesNotReturn;
+            return NameResolveError
+                .FunctionDoesNotReturn;
 
         for (function.parameters.items) |param| {
             if (tl.getType(param.@"1") == null)
-                return SemanticAnalysisError.TypeDoesNotExist;
+                return SemanticAnalysisError
+                    .TypeDoesNotExist;
 
             try function.scope.variables.put(
                 alloc,
@@ -52,10 +59,16 @@ pub fn nameResolution(alloc: Allocator, tl: *TopLevel) NameResolveError!void {
 
         // Ensure return type exists:
         if (tl.getType(function.returns) == null)
-            return SemanticAnalysisError.TypeDoesNotExist;
+            return SemanticAnalysisError
+                .TypeDoesNotExist;
 
         for (function.body.ast.items) |ast| {
-            try nameResolveAst(alloc, tl, function, ast);
+            try nameResolveAst(
+                alloc,
+                tl,
+                function,
+                ast,
+            );
         }
     }
 
