@@ -31,6 +31,7 @@ pub const Operand = union(enum) {
     variable: []const u8,
     fn_name: []const u8,
     int: usize,
+    unused,
 };
 
 pub const ThreeAddressCode = struct {
@@ -152,7 +153,7 @@ pub fn exprToIr(
             const code = ThreeAddressCode{
                 .op = .{ .unary_op = u.op },
                 .arg1 = val,
-                .arg2 = undefined,
+                .arg2 = .unused,
             };
             try function.instructions.append(alloc, code);
 
@@ -236,7 +237,7 @@ pub fn exprToIr(
             const code: ThreeAddressCode = .{
                 .op = .return_something,
                 .arg1 = ret,
-                .arg2 = undefined,
+                .arg2 = .unused,
             };
 
             try function.instructions.append(alloc, code);
