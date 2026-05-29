@@ -42,6 +42,10 @@ pub const StackFrame = struct {
         _ = ri;
         _ = func;
 
+        // TODO: Based on the type of the
+        // variable/parameter, need to allocate more space on
+        // the stack for it
+
         return sf;
     }
 };
