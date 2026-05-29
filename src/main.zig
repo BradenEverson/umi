@@ -73,4 +73,9 @@ pub fn main(init: std.process.Init) !void {
     {
         std.debug.print("{any}\n", .{instr});
     }
+
+    try umi.reg_alloc.regAlloc(
+        alloc,
+        irtl.ir.functions.get("main").?,
+    );
 }
