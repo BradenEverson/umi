@@ -38,6 +38,10 @@ pub const ThreeAddressCode = struct {
     op: Operator,
     arg1: Operand,
     arg2: Operand,
+
+    // Calculated and used during
+    // register allocation
+    last_used: usize = 0,
 };
 
 pub const Operator = union(enum) {
