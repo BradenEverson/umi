@@ -74,5 +74,5 @@ pub fn main(init: std.process.Init) !void {
         std.debug.print("{any}\n", .{instr});
     }
 
-    try umi.reg_alloc.regAlloc(alloc, &irtl);
+    try umi.reg_alloc.regAlloc(.x86_64, alloc, &irtl);
 }

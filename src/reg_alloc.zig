@@ -11,7 +11,7 @@ const FunctionIR = ir.FunctionIR;
 const ThreeAddressCode = ir.ThreeAddressCode;
 const Operand = ir.Operand;
 
-const compiler = @import("compiler.zig");
+const arch = @import("arch.zig");
 
 fn dependsOn(code: ThreeAddressCode, op: Operand) bool {
     return std.mem.eql(Operand, code.arg1, op) or
@@ -36,9 +36,11 @@ pub const AllocatedFunction = struct {
 pub const RegAllocError = Allocator.Error;
 
 pub fn regAlloc(
+    target: arch.Arch,
     alloc: Allocator,
     irtl: *IrTopLevel,
 ) RegAllocError!void {
+    _ = arch.registerInfo(target);
     _ = alloc;
     _ = irtl;
 }
