@@ -13,6 +13,8 @@ const Type = ts.Type;
 const StructDef = ts.StructDef;
 const VariableDef = ts.VariableDef;
 
+const ProgramIR = @import("ir.zig").ProgramIR;
+
 pub const Scope = struct {
     // PARENT IS NOT OWNED AND WILL NOT BE
     // DEINITED BY CHILD, k thanks :)
@@ -76,6 +78,7 @@ pub const Function = struct {
 pub const TopLevel = struct {
     types: std.StringHashMapUnmanaged(Type) = .empty,
     functions: std.StringHashMapUnmanaged(Function) = .empty,
+    ir: ProgramIR = .{},
 
     pub fn getType(tl: *TopLevel, ty: []const u8) ?Type {
         switch (ty[0]) {
@@ -130,6 +133,7 @@ pub const TopLevel = struct {
         while (fns.next()) |f| f.deinit(alloc);
 
         tl.functions.deinit(alloc);
+        tl.ir.deinit(alloc);
     }
 };
 

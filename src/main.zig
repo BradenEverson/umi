@@ -60,19 +60,14 @@ pub fn main(init: std.process.Init) !void {
 
     try umi.optimizer.optimize(alloc, &tl);
 
-    var ir = try umi.ir_gen.genIr(alloc, &tl);
-    defer ir.deinit(alloc);
+    const ir = try umi.ir_gen.genIr(alloc, &tl);
+    tl.ir = ir;
 
-    var irtl: umi.ir_gen.IrTopLevel = .{
-        .types = tl.types,
-        .ir = ir,
-    };
-
-    for (irtl.ir.functions.get("main").?
+    for (tl.ir.functions.get("main").?
         .instructions.items) |instr|
     {
         std.debug.print("{any}\n", .{instr});
     }
 
-    try umi.reg_alloc.regAlloc(.x86_64, alloc, &irtl);
+    try umi.reg_alloc.regAlloc(.x86_64, alloc, &tl);
 }

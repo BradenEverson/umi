@@ -5,8 +5,11 @@ const Allocator = std.mem.Allocator;
 
 const builtin = @import("builtin");
 
+const parser = @import("parser.zig");
+const TopLevel = parser.TopLevel;
+const Function = parser.Function;
+
 const ir = @import("ir.zig");
-const IrTopLevel = ir.IrTopLevel;
 const FunctionIR = ir.FunctionIR;
 const ThreeAddressCode = ir.ThreeAddressCode;
 const Operand = ir.Operand;
@@ -27,6 +30,20 @@ pub const StackFrame = struct {
     pub fn deinit(sf: *StackFrame, alloc: Allocator) void {
         sf.variables.deinit(alloc);
     }
+
+    pub fn init(
+        alloc: Allocator,
+        ri: *const arch.RegisterInfo,
+        func: *const Function,
+    ) Allocator.Error!StackFrame {
+        var sf: StackFrame = .{};
+        errdefer sf.deinit(alloc);
+
+        _ = ri;
+        _ = func;
+
+        return sf;
+    }
 };
 
 pub const AllocatedFunction = struct {
@@ -38,11 +55,11 @@ pub const RegAllocError = Allocator.Error;
 pub fn regAlloc(
     target: arch.Arch,
     alloc: Allocator,
-    irtl: *IrTopLevel,
+    tl: *TopLevel,
 ) RegAllocError!void {
     _ = arch.registerInfo(target);
     _ = alloc;
-    _ = irtl;
+    _ = tl;
 }
 
 pub fn regAllocFunction(

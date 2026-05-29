@@ -16,15 +16,6 @@ pub const IrError = std.mem.Allocator.Error;
 
 pub const Temp = usize;
 
-/// The Top Level with functions translated to IR,
-/// neither fields are owned and should be deinit-ed
-/// separately
-pub const IrTopLevel = struct {
-    types: std.StringHashMapUnmanaged(Type) =
-        .empty,
-    ir: ProgramIR,
-};
-
 pub const Operand = union(enum) {
     reference: Temp,
     literal: Literal,
