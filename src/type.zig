@@ -4,6 +4,10 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 
 const parser = @import("parser.zig");
+const TopLevel = parser.TopLevel;
+
+const arch = @import("arch.zig");
+const RegisterInfo = arch.RegisterInfo;
 
 const IntDef = struct {
     signed: enum { signed, unsigned },
@@ -35,23 +39,44 @@ pub const Type = union(enum) {
     slice: *Type,
     array: struct { ty: *Type, count: usize },
 
-    // pub fn sizeBytes(ty: Type) usize {
-    //     var bytes = 0;
-    //
-    //     switch (ty) {
-    //         .its_a_struct => |s| {},
-    //         .its_an_int => |i| {},
-    //         .its_a_float => |f| {},
-    //         .its_a_comptime_number => |c| {},
-    //         .its_void => |v| {},
-    //         .its_a_bool => |b| {},
-    //         .its_a_pointer => |p| {},
-    //         .slice => |s| {},
-    //         .array => |a| {},
-    //     }
-    //
-    //     return bytes;
-    // }
+    pub fn sizeWords(
+        ty: Type,
+        tl: *const TopLevel,
+        ri: *const RegisterInfo,
+    ) usize {
+        var words: usize = 0;
+
+        switch (ty) {
+            .its_a_struct => |s| {
+                // TODO: Struct repacking to ensure
+                // alignment
+                // everything as at least a word is probably
+                // not so optimal
+                var attrs = s.attributes.iterator();
+                while (attrs.next()) |attr|
+                    words += sizeWords(tl
+                        .getType(attr.value_ptr).?);
+            },
+            .its_an_int => |i| words = (((i.bits + 7) / 8) +
+                ri.word_size) / ri.word_size,
+
+            .its_a_float => |f| switch (f) {
+                .f_16 => words = (2 + ri.word_size) / ri.word_size,
+                .f_32 => words = (4 + ri.word_size) / ri.word_size,
+                .f_64 => words = (8 + ri.word_size) / ri.word_size,
+            },
+            .its_a_comptime_number => words = 0,
+            .its_void => words = 0,
+            .its_a_bool => words = 1,
+
+            .array => |a| words = a.count * a.ty.sizeWords(tl),
+
+            .its_a_pointer => words = 1,
+            .slice => words = 2,
+        }
+
+        return words;
+    }
 
     pub fn binaryOpIsValidForType(a: Type, op: parser.BinaryOp) bool {
         switch (op) {
