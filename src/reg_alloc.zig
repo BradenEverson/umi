@@ -46,9 +46,13 @@ pub fn regAlloc(
 }
 
 pub fn regAllocFunction(
+    ri: *const arch.RegisterInfo,
     alloc: Allocator,
     fir: FunctionIR,
-) RegAllocError!void {
+) RegAllocError!AllocatedFunction {
+    _ = ri;
     _ = alloc;
     _ = fir;
+
+    return RegAllocError.OutOfMemory;
 }
