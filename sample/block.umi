@@ -1,0 +1,17 @@
+/// Scope blocks (necessary for else statements to really work how I want them too
+
+fn main() -> void {
+    // This would be nice, kinda like what Rust does, maybe later
+    // let a: u32 = {
+    //    let b: u32 = 10;
+    //    a * b
+    //};
+
+    // But for now, this is what blocks will be
+    let a: u32 = 10;
+    {
+        let b: u32 = a * a;
+    }
+
+    let b: f32 = 10;
+}

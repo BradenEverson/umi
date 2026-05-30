@@ -263,14 +263,20 @@ pub fn exprToIr(
 
             try function.instructions.append(alloc, branch);
 
-            for (i.block.items) |ex| {
-                _ = try exprToIr(alloc, ex, tl, function);
-            }
+            _ = try exprToIr(alloc, i.if_stuff, tl, function);
 
             try function.instructions.append(
                 alloc,
                 .{ .op = .{ .label = l } },
             );
+
+            return .unused;
+        },
+
+        .block => |b| {
+            for (b.block.items) |ex| {
+                _ = try exprToIr(alloc, ex, tl, function);
+            }
 
             return .unused;
         },

@@ -117,7 +117,7 @@ fn exprReturns(expr: *const Expr) bool {
         // constructs will need to call this recursively
         // you feel
         .return_val => return true,
-        .assignment, .binary_op, .construction, .fn_call, .literal, .unary_op, .variable, .if_statement => return false,
+        .assignment, .binary_op, .construction, .fn_call, .literal, .unary_op, .variable, .if_statement, .block => return false,
     }
 }
 
@@ -171,13 +171,15 @@ fn nameResolveAst(
             if (func.parameters.items.len != f.arguments.items.len)
                 return SemanticAnalysisError.ArgumentsLenDoesNotMatchUp;
         },
-        .if_statement => |*is| {
+        .if_statement => |is| {
             try nameResolveAst(alloc, tl, scope, is.cond);
+            try nameResolveAst(alloc, tl, scope, is.if_stuff);
+        },
+        .block => |*b| {
+            b.scope.parent = scope;
 
-            is.scope.parent = scope;
-
-            for (is.block.items) |e|
-                try nameResolveAst(alloc, tl, &is.scope, e);
+            for (b.block.items) |e|
+                try nameResolveAst(alloc, tl, &b.scope, e);
         },
         .literal => {},
     }
@@ -220,6 +222,7 @@ pub fn exprEvalsTo(
         .construction => return .its_void,
         .assignment => return .its_void,
         .if_statement => return .its_void,
+        .block => return .its_void,
     }
 }
 
@@ -305,8 +308,12 @@ pub fn typeCheckExpr(
             if (cond != .its_a_bool)
                 return TypeCheckError.ExpectedABool;
 
-            for (f.block.items) |e|
-                try typeCheckExpr(tl, &f.scope, fn_ret_ty, e);
+            try typeCheckExpr(tl, scope, fn_ret_ty, f.if_stuff);
+        },
+
+        .block => |b| {
+            for (b.block.items) |e|
+                try typeCheckExpr(tl, &b.scope, fn_ret_ty, e);
         },
 
         .variable, .unary_op, .literal => {},

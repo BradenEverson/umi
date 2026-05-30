@@ -154,8 +154,13 @@ pub const Expr = union(enum) {
     return_val: *Expr,
 
     if_statement: struct {
-        scope: Scope = .{},
         cond: *Expr,
+        if_stuff: *Expr,
+        //else_stuff: ?*Expr,
+    },
+
+    block: struct {
+        scope: Scope = .{},
         block: std.ArrayList(*Expr) =
             .empty,
     },
@@ -223,14 +228,20 @@ pub const Expr = union(enum) {
                 f.arguments.deinit(alloc);
             },
 
-            .if_statement => |*i| {
+            .if_statement => |i| {
                 i.cond.deinit(alloc);
                 alloc.destroy(i.cond);
 
+                i.if_stuff.deinit(alloc);
+                alloc.destroy(i.if_stuff);
+            },
+
+            .block => |*i| {
                 for (i.block.items) |b| {
                     b.deinit(alloc);
                     alloc.destroy(b);
                 }
+
                 i.block.deinit(alloc);
                 i.scope.deinit(alloc);
             },
@@ -558,8 +569,8 @@ pub fn statement(
     self: *Parser,
     alloc: Allocator,
 ) AnyParserError!*Expr {
-    if (self.peek() == .keyword) {
-        switch (self.peekTok().kw().?) {
+    switch (self.peek()) {
+        .keyword => switch (self.peekTok().kw().?) {
             .return_kw => {
                 try self.consume(.keyword);
 
@@ -578,28 +589,24 @@ pub fn statement(
                 try self.consume(.open_paren);
 
                 // Condition to check
-                const cond = try self
+                var cond = try self
                     .term(alloc);
+                errdefer cond.deinit(alloc);
 
                 const if_stmnt = try alloc.create(Expr);
+                errdefer alloc.destroy(if_stmnt);
+
+                try self.consume(.close_paren);
+
+                var if_stuff = try self.statement(alloc);
+                errdefer if_stuff.deinit(alloc);
+
                 if_stmnt.* = .{
                     .if_statement = .{
                         .cond = cond,
+                        .if_stuff = if_stuff,
                     },
                 };
-                errdefer if_stmnt.deinit(alloc);
-
-                try self.consume(.close_paren);
-                try self.consume(.open_brace);
-
-                while (self.peek() != .close_brace) {
-                    const expr = try self.statement(alloc);
-                    try if_stmnt.if_statement.block.append(
-                        alloc,
-                        expr,
-                    );
-                }
-                try self.consume(.close_brace);
 
                 return if_stmnt;
             },
@@ -654,11 +661,30 @@ pub fn statement(
                 try self.consume(.semicolon);
                 return expr;
             },
-        }
-    } else {
-        const expr = try self.expression(alloc);
-        try self.consume(.semicolon);
-        return expr;
+        },
+
+        .open_brace => {
+            const block = try alloc.create(Expr);
+            block.* = .{ .block = .{} };
+
+            try self.consume(.open_brace);
+
+            while (self.peek() != .close_brace) {
+                const expr = try self.statement(alloc);
+                try block.block.block.append(
+                    alloc,
+                    expr,
+                );
+            }
+            try self.consume(.close_brace);
+            return block;
+        },
+
+        else => {
+            const expr = try self.expression(alloc);
+            try self.consume(.semicolon);
+            return expr;
+        },
     }
 }
 
