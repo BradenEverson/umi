@@ -153,6 +153,13 @@ pub const Expr = union(enum) {
 
     return_val: *Expr,
 
+    if_statement: struct {
+        scope: Scope = .{},
+        cond: *Expr,
+        block: std.ArrayList(*Expr) =
+            .empty,
+    },
+
     fn_call: struct {
         name: []const u8,
         arguments: std.ArrayList(*Expr) =
@@ -214,6 +221,18 @@ pub const Expr = union(enum) {
                 }
 
                 f.arguments.deinit(alloc);
+            },
+
+            .if_statement => |*i| {
+                i.cond.deinit(alloc);
+                alloc.destroy(i.cond);
+
+                for (i.block.items) |b| {
+                    b.deinit(alloc);
+                    alloc.destroy(b);
+                }
+                i.block.deinit(alloc);
+                i.scope.deinit(alloc);
             },
 
             .literal, .variable => {},
@@ -554,6 +573,37 @@ pub fn statement(
                 return ret;
             },
 
+            .if_kw => {
+                try self.consume(.keyword);
+                try self.consume(.open_paren);
+
+                // Condition to check
+                const cond = try self
+                    .term(alloc);
+
+                const if_stmnt = try alloc.create(Expr);
+                if_stmnt.* = .{
+                    .if_statement = .{
+                        .cond = cond,
+                    },
+                };
+                errdefer if_stmnt.deinit(alloc);
+
+                try self.consume(.close_paren);
+                try self.consume(.open_brace);
+
+                while (self.peek() != .close_brace) {
+                    const expr = try self.statement(alloc);
+                    try if_stmnt.if_statement.block.append(
+                        alloc,
+                        expr,
+                    );
+                }
+                try self.consume(.close_brace);
+
+                return if_stmnt;
+            },
+
             .let => {
                 try self.consume(.keyword);
                 // next token is either mut if
@@ -579,6 +629,8 @@ pub fn statement(
 
                 try self.consume(.equals);
                 const value = try self.term(alloc);
+                errdefer value.deinit(alloc);
+
                 try self.consume(.semicolon);
 
                 const construction = try alloc

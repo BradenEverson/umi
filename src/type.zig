@@ -24,6 +24,7 @@ pub const TypeCheckError = error{
     BinaryOpTypesDoNotAgree,
     FunctionArgumentsDoNotAgree,
     InvalidOpForType,
+    ExpectedABool,
 };
 
 pub const Type = union(enum) {

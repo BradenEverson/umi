@@ -1,0 +1,12 @@
+/// If statement that enforces scoping rules by double declaring a variable after
+
+fn main() -> void {
+    let mut a: u32 = 10;
+
+    if (a == 10) {
+        a = 15;
+        let b: bool = a == 10;
+    }
+
+    let b: u32 = 15;
+}

@@ -57,6 +57,11 @@ pub fn comptimeEval(
         .return_val => |r| try comptimeEval(alloc, r),
 
         .literal, .variable => {},
+        .if_statement => |i| {
+            try comptimeEval(alloc, i.cond);
+            for (i.block.items) |e|
+                try comptimeEval(alloc, e);
+        },
     }
 }
 

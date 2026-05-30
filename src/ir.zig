@@ -241,5 +241,11 @@ pub fn exprToIr(
                     .items.len - 1,
             };
         },
+
+        .if_statement => {
+            // TODO: evaluate the cond, then some sort of
+            // if jump construct thingy
+            return IrError.OutOfMemory;
+        },
     }
 }

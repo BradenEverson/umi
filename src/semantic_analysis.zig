@@ -66,7 +66,7 @@ pub fn nameResolution(
             try nameResolveAst(
                 alloc,
                 tl,
-                function,
+                &function.scope,
                 ast,
             );
         }
@@ -117,59 +117,67 @@ fn exprReturns(expr: *const Expr) bool {
         // constructs will need to call this recursively
         // you feel
         .return_val => return true,
-        .assignment, .binary_op, .construction, .fn_call, .literal, .unary_op, .variable => return false,
+        .assignment, .binary_op, .construction, .fn_call, .literal, .unary_op, .variable, .if_statement => return false,
     }
 }
 
 fn nameResolveAst(
     alloc: Allocator,
     tl: *TopLevel,
-    function: *parser.Function,
-    expr: *const Expr,
+    scope: *parser.Scope,
+    expr: *Expr,
 ) NameResolveError!void {
     switch (expr.*) {
-        .return_val => |r| try nameResolveAst(alloc, tl, function, r),
+        .return_val => |r| try nameResolveAst(alloc, tl, scope, r),
         .construction => |c| {
-            try nameResolveAst(alloc, tl, function, c.val);
+            try nameResolveAst(alloc, tl, scope, c.val);
             if (tl.getType(c.ty) == null)
                 return SemanticAnalysisError.TypeDoesNotExist;
 
-            if (function.variableExists(c.name))
+            if (scope.variableExists(c.name))
                 return SemanticAnalysisError.VariableAlreadyDefined;
 
-            try function.scope.variables.put(alloc, c.name, .{
+            try scope.variables.put(alloc, c.name, .{
                 .mutable = c.mutable,
                 .ty = c.ty,
             });
         },
         .assignment => |a| {
-            try nameResolveAst(alloc, tl, function, a.val);
-            if (!function.variableExists(a.name))
+            try nameResolveAst(alloc, tl, scope, a.val);
+            if (!scope.variableExists(a.name))
                 return SemanticAnalysisError.VariableUsedBeforeDefine;
 
-            const variable = function.scope.variables.get(a.name).?;
+            const variable = scope.getVariable(a.name).?;
             if (!variable.mutable)
                 return SemanticAnalysisError.ImmutableVariableAssigned;
         },
         .variable => |v| {
-            if (!function.variableExists(v))
+            if (!scope.variableExists(v))
                 return SemanticAnalysisError.VariableUsedBeforeDefine;
         },
         .binary_op => |b| {
-            try nameResolveAst(alloc, tl, function, b.left);
-            try nameResolveAst(alloc, tl, function, b.right);
+            try nameResolveAst(alloc, tl, scope, b.left);
+            try nameResolveAst(alloc, tl, scope, b.right);
         },
-        .unary_op => |u| try nameResolveAst(alloc, tl, function, u.expr),
+        .unary_op => |u| try nameResolveAst(alloc, tl, scope, u.expr),
         .fn_call => |f| {
             if (tl.functions.get(f.name) == null)
                 return SemanticAnalysisError.FunctionDoesNotExist;
 
             for (f.arguments.items) |arg|
-                try nameResolveAst(alloc, tl, function, arg);
+                try nameResolveAst(alloc, tl, scope, arg);
 
             const func = tl.functions.get(f.name).?;
             if (func.parameters.items.len != f.arguments.items.len)
                 return SemanticAnalysisError.ArgumentsLenDoesNotMatchUp;
+        },
+        .if_statement => |*is| {
+            try nameResolveAst(alloc, tl, scope, is.cond);
+
+            is.scope.parent = scope;
+
+            for (is.block.items) |e|
+                try nameResolveAst(alloc, tl, &is.scope, e);
         },
         .literal => {},
     }
@@ -177,7 +185,7 @@ fn nameResolveAst(
 
 pub fn exprEvalsTo(
     tl: *TopLevel,
-    scope: *parser.Function,
+    scope: *const parser.Scope,
     expr: *const Expr,
 ) TypeCheckError!Type {
     switch (expr.*) {
@@ -186,7 +194,7 @@ pub fn exprEvalsTo(
         // variables all exist and the types of them must too
         //
         // TODO: Need parameters to show up here too
-        .variable => |v| return tl.getType(scope.scope.variables.get(v).?.ty).?,
+        .variable => |v| return tl.getType(scope.getVariable(v).?.ty).?,
 
         .fn_call => |f| return tl.getType(
             tl.functions.get(f.name).?.returns,
@@ -211,6 +219,7 @@ pub fn exprEvalsTo(
 
         .construction => return .its_void,
         .assignment => return .its_void,
+        .if_statement => return .its_void,
     }
 }
 
@@ -237,13 +246,13 @@ pub fn typeCheck(tl: *TopLevel) TypeCheckError!void {
         // the fn
         const ret_type = tl.getType(function.returns).?;
         for (function.body.ast.items) |expr|
-            try typeCheckExpr(tl, function, ret_type, expr);
+            try typeCheckExpr(tl, &function.scope, ret_type, expr);
     }
 }
 
 pub fn typeCheckExpr(
     tl: *TopLevel,
-    scope: *parser.Function,
+    scope: *const parser.Scope,
     fn_ret_ty: Type,
     expr: *const Expr,
 ) TypeCheckError!void {
@@ -261,7 +270,7 @@ pub fn typeCheckExpr(
         },
 
         .assignment => |a| {
-            const variable = scope.scope.getVariable(a.name).?;
+            const variable = scope.getVariable(a.name).?;
             const variable_type = tl.getType(variable.ty).?;
             const assignment_var = try exprEvalsTo(tl, scope, a.val);
 
@@ -290,6 +299,16 @@ pub fn typeCheckExpr(
                 _ = try arg_type.agreesWith(param_type);
             }
         },
+
+        .if_statement => |f| {
+            const cond = try exprEvalsTo(tl, scope, f.cond);
+            if (cond != .its_a_bool)
+                return TypeCheckError.ExpectedABool;
+
+            for (f.block.items) |e|
+                try typeCheckExpr(tl, &f.scope, fn_ret_ty, e);
+        },
+
         .variable, .unary_op, .literal => {},
     }
 }
