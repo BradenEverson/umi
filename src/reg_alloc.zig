@@ -16,22 +16,21 @@ const Operand = ir.Operand;
 
 const arch = @import("arch.zig");
 
-fn dependsOn(code: ThreeAddressCode, op: Operand) bool {
-    return std.mem.eql(Operand, code.arg1, op) or
-        std.mem.eql(Operand, code.arg2, op);
-}
-
 pub const StackFrame = struct {
     /// Holds the stack offset to all local and parameter
     /// variables
     variables: std.StringHashMapUnmanaged(usize) = .{},
     size: usize = 0,
 
-    pub fn deinit(sf: *StackFrame, alloc: Allocator) void {
+    pub fn deinit(
+        sf: *StackFrame,
+        alloc: Allocator,
+    ) void {
         sf.variables.deinit(alloc);
     }
 
     pub fn init(
+        tl: *TopLevel,
         alloc: Allocator,
         ri: *const arch.RegisterInfo,
         func: *const Function,
@@ -39,6 +38,7 @@ pub const StackFrame = struct {
         var sf: StackFrame = .{};
         errdefer sf.deinit(alloc);
 
+        _ = tl;
         _ = ri;
         _ = func;
 
@@ -57,9 +57,9 @@ pub const AllocatedFunction = struct {
 pub const RegAllocError = Allocator.Error;
 
 pub fn regAlloc(
-    target: arch.Arch,
     alloc: Allocator,
     tl: *TopLevel,
+    target: arch.Arch,
 ) RegAllocError!void {
     _ = arch.registerInfo(target);
     _ = alloc;
