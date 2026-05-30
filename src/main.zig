@@ -63,7 +63,15 @@ pub fn main(init: std.process.Init) !void {
     for (tl.functions.get("main").?
         .body.ast.items) |instr|
     {
-        std.debug.print("{any}\n", .{instr});
+        switch (instr.*) {
+            .if_statement => |i| {
+                std.debug.print("IF {any}:\n", .{i.cond});
+                for (i.block.items) |b| {
+                    std.debug.print("\t{any}\n", .{b});
+                }
+            },
+            else => std.debug.print("{any}\n", .{instr}),
+        }
     }
 
     // const ir = try umi.ir_gen.genIr(alloc, &tl);
