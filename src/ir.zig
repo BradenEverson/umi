@@ -16,6 +16,13 @@ pub const IrError = std.mem.Allocator.Error;
 
 pub const Temp = usize;
 
+var label: usize = 0;
+
+fn nextLabel() usize {
+    defer label += 1;
+    return label;
+}
+
 pub const Operand = union(enum) {
     reference: Temp,
     literal: Literal,
@@ -27,8 +34,8 @@ pub const Operand = union(enum) {
 
 pub const ThreeAddressCode = struct {
     op: Operator,
-    arg1: Operand,
-    arg2: Operand,
+    arg1: Operand = .unused,
+    arg2: Operand = .unused,
 
     // Calculated and used during
     // register allocation
@@ -38,6 +45,10 @@ pub const ThreeAddressCode = struct {
 pub const Operator = union(enum) {
     binary_op: BinaryOp,
     unary_op: UnaryOp,
+    label: usize,
+
+    if_true_goto,
+    if_false_goto,
 
     assignment,
     return_something,
@@ -148,7 +159,6 @@ pub fn exprToIr(
             const code = ThreeAddressCode{
                 .op = .{ .unary_op = u.op },
                 .arg1 = val,
-                .arg2 = .unused,
             };
             try function.instructions.append(alloc, code);
 
@@ -232,7 +242,6 @@ pub fn exprToIr(
             const code: ThreeAddressCode = .{
                 .op = .return_something,
                 .arg1 = ret,
-                .arg2 = .unused,
             };
 
             try function.instructions.append(alloc, code);
@@ -242,10 +251,28 @@ pub fn exprToIr(
             };
         },
 
-        .if_statement => {
-            // TODO: evaluate the cond, then some sort of
-            // if jump construct thingy
-            return IrError.OutOfMemory;
+        .if_statement => |i| {
+            const cond = try exprToIr(alloc, i.cond, tl, function);
+            const l = nextLabel();
+
+            const branch = ThreeAddressCode{
+                .op = .if_false_goto,
+                .arg1 = cond,
+                .arg2 = .{ .int = l },
+            };
+
+            try function.instructions.append(alloc, branch);
+
+            for (i.block.items) |ex| {
+                _ = try exprToIr(alloc, ex, tl, function);
+            }
+
+            try function.instructions.append(
+                alloc,
+                .{ .op = .{ .label = l } },
+            );
+
+            return .unused;
         },
     }
 }
