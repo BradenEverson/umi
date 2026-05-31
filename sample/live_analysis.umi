@@ -1,8 +1,7 @@
 
 fn main() -> void {
     let a: u8 = 10;
-
-
-
+    let mut c: u8 = 0;
     let b: u8 = a * a;
+    c = b + c;
 }
