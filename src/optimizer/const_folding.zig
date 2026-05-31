@@ -60,6 +60,13 @@ pub fn comptimeEval(
         .if_statement => |i| {
             try comptimeEval(alloc, i.cond);
             try comptimeEval(alloc, i.if_stuff);
+            if (i.else_stuff) |el|
+                try comptimeEval(alloc, el);
+        },
+
+        .while_loop => |w| {
+            try comptimeEval(alloc, w.cond);
+            try comptimeEval(alloc, w.do_stuff);
         },
         .block => |b| {
             for (b.block.items) |e|

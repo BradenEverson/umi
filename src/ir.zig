@@ -295,6 +295,41 @@ pub fn exprToIr(
             return .unused;
         },
 
+        .while_loop => |w| {
+            const cond = try exprToIr(alloc, w.cond, tl, function);
+            const l1 = nextLabel();
+            const l2 = nextLabel();
+
+            const branch = ThreeAddressCode{
+                .op = .if_false_goto,
+                .arg1 = cond,
+                .arg2 = .{ .int = l2 },
+            };
+
+            try function.instructions.append(
+                alloc,
+                .{ .op = .{ .label = l1 } },
+            );
+            try function.instructions.append(alloc, branch);
+
+            _ = try exprToIr(alloc, w.do_stuff, tl, function);
+
+            try function.instructions.append(
+                alloc,
+                .{
+                    .op = .goto,
+                    .arg1 = .{ .int = l1 },
+                },
+            );
+
+            try function.instructions.append(
+                alloc,
+                .{ .op = .{ .label = l2 } },
+            );
+
+            return .unused;
+        },
+
         .block => |b| {
             for (b.block.items) |ex| {
                 _ = try exprToIr(alloc, ex, tl, function);

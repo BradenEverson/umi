@@ -117,7 +117,7 @@ fn exprReturns(expr: *const Expr) bool {
         // constructs will need to call this recursively
         // you feel
         .return_val => return true,
-        .assignment, .binary_op, .construction, .fn_call, .literal, .unary_op, .variable, .if_statement, .block => return false,
+        .assignment, .binary_op, .construction, .fn_call, .literal, .unary_op, .variable, .if_statement, .while_loop, .block => return false,
     }
 }
 
@@ -177,6 +177,10 @@ fn nameResolveAst(
             if (is.else_stuff) |el|
                 try nameResolveAst(alloc, tl, scope, el);
         },
+        .while_loop => |l| {
+            try nameResolveAst(alloc, tl, scope, l.cond);
+            try nameResolveAst(alloc, tl, scope, l.do_stuff);
+        },
         .block => |*b| {
             b.scope.parent = scope;
 
@@ -225,6 +229,7 @@ pub fn exprEvalsTo(
         .assignment => return .its_void,
         .if_statement => return .its_void,
         .block => return .its_void,
+        .while_loop => return .its_void,
     }
 }
 
@@ -314,6 +319,14 @@ pub fn typeCheckExpr(
 
             if (f.else_stuff) |el|
                 try typeCheckExpr(tl, scope, fn_ret_ty, el);
+        },
+
+        .while_loop => |f| {
+            const cond = try exprEvalsTo(tl, scope, f.cond);
+            if (cond != .its_a_bool)
+                return TypeCheckError.ExpectedABool;
+
+            try typeCheckExpr(tl, scope, fn_ret_ty, f.do_stuff);
         },
 
         .block => |b| {

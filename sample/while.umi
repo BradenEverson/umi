@@ -1,0 +1,13 @@
+//! While loop
+
+fn main() -> void {
+    let mut not_done: bool = false;
+    let mut counter: u32 = 0;
+
+    while (not_done) {
+        counter = counter + 1;
+        if (counter == 10) {
+            not_done = false;
+        }
+    }
+}

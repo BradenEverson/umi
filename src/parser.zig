@@ -165,6 +165,11 @@ pub const Expr = union(enum) {
 
     return_val: *Expr,
 
+    while_loop: struct {
+        cond: *Expr,
+        do_stuff: *Expr,
+    },
+
     if_statement: struct {
         cond: *Expr,
         if_stuff: *Expr,
@@ -251,6 +256,14 @@ pub const Expr = union(enum) {
                     el.deinit(alloc);
                     alloc.destroy(el);
                 }
+            },
+
+            .while_loop => |w| {
+                w.cond.deinit(alloc);
+                alloc.destroy(w.cond);
+
+                w.do_stuff.deinit(alloc);
+                alloc.destroy(w.do_stuff);
             },
 
             .block => |*i| {
@@ -638,6 +651,33 @@ pub fn statement(
                 }
 
                 return if_stmnt;
+            },
+
+            .while_kw => {
+                try self.consume(.keyword);
+                try self.consume(.open_paren);
+
+                // Condition to check
+                var cond = try self
+                    .term(alloc);
+                errdefer cond.deinit(alloc);
+
+                const loop = try alloc.create(Expr);
+                errdefer alloc.destroy(loop);
+
+                try self.consume(.close_paren);
+
+                var do_stuff = try self.statement(alloc);
+                errdefer do_stuff.deinit(alloc);
+
+                loop.* = .{
+                    .while_loop = .{
+                        .cond = cond,
+                        .do_stuff = do_stuff,
+                    },
+                };
+
+                return loop;
             },
 
             .let => {
