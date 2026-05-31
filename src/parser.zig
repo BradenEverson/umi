@@ -19,7 +19,8 @@ pub const Scope = struct {
     // PARENT IS NOT OWNED AND WILL NOT BE
     // DEINITED BY CHILD, k thanks :)
     parent: ?*Scope = null,
-    variables: std.StringHashMapUnmanaged(VariableDef) = .empty,
+    variables: std.StringHashMapUnmanaged(VariableDef) =
+        .empty,
 
     /// Checks if variable exists within the current scope
     pub fn variableExists(
@@ -55,14 +56,19 @@ pub const Scope = struct {
 };
 
 pub const Function = struct {
-    parameters: std.ArrayList(struct { []const u8, []const u8 }) = .empty,
+    parameters: std.ArrayList(
+        struct { []const u8, []const u8 },
+    ) = .empty,
     scope: Scope,
 
     returns: []const u8 = "void",
     body: Ast = .{},
 
     /// Checks if variable exists within the current scope
-    pub fn variableExists(f: *const Function, name: []const u8) bool {
+    pub fn variableExists(
+        f: *const Function,
+        name: []const u8,
+    ) bool {
         const in_scope = f.scope.variableExists(name);
 
         return in_scope;
@@ -77,7 +83,8 @@ pub const Function = struct {
 
 pub const TopLevel = struct {
     types: std.StringHashMapUnmanaged(Type) = .empty,
-    functions: std.StringHashMapUnmanaged(Function) = .empty,
+    functions: std.StringHashMapUnmanaged(Function) =
+        .empty,
     global_scope: Scope = .{},
     ir: ProgramIR = .{},
 
@@ -93,7 +100,11 @@ pub const TopLevel = struct {
                 ) catch return null;
 
                 return .{ .its_an_int = .{
-                    .signed = if (ty[0] == 'u') .unsigned else .signed,
+                    .signed = if (ty[0] == 'u')
+                        .unsigned
+                    else
+                        .signed,
+
                     .bits = bits,
                 } };
             },
