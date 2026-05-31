@@ -8,6 +8,16 @@ fn foo_valid(a: u32) -> u32 {
     }
 }
 
+// fn nested_invalid(a: u32) -> u32 {
+//     if (a < 10) {
+//         if (a < 5) {
+//             return a * a;
+//         } else {}
+//     } else {
+//         return a - 5;
+//     }
+// }
+
 // fn foo_invalid(a: u32) -> u32 {
 //     if (a < 10) {
 //         return a * a;
