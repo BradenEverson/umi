@@ -43,8 +43,8 @@ pub const StackFrame = struct {
         _ = func;
 
         // TODO: Based on the type of the
-        // variable/parameter, need to allocate more space on
-        // the stack for it
+        // variable/parameter, need to allocate
+        // more space on the stack for it
 
         return sf;
     }
@@ -61,19 +61,64 @@ pub fn regAlloc(
     tl: *TopLevel,
     target: arch.Arch,
 ) RegAllocError!void {
-    _ = arch.registerInfo(target);
+    const ri = arch.registerInfo(target);
+    _ = ri;
     _ = alloc;
-    _ = tl;
+
+    var functions = tl.ir.functions.iterator();
+    while (functions.next()) |function| {
+        std.debug.print("doing live analysis\n", .{});
+        try liveAnalysis(function.value_ptr);
+
+        // _ = try regAllocFunction(
+        //     ri,
+        //     alloc,
+        //     function.value_ptr,
+        // );
+    }
+}
+
+pub fn liveAnalysis(
+    function: *FunctionIR,
+) RegAllocError!void {
+    // TODO: This only goes forwards, after some research
+    // it looks like we need iterative dataflow analysis
+    // to handle things like loops and such
+    //
+    // https://www.cs.princeton.edu/courses/archive/spr03/cs320/notes/analysis2.pdf
+    for (0..function.instructions.items.len) |i| {
+        const curr = function.instructions.items[i];
+        var last_dep = i;
+
+        for (i..function.instructions.items.len) |j| {
+            const check = function.instructions.items[j];
+            if (curr.op == .assignment) {
+                const variable = curr.arg1.variable;
+
+                if (check.arg1.depOnVar(variable) or
+                    check.arg2.depOnVar(variable))
+                {
+                    last_dep = j;
+                }
+            } else if (check.arg1.depOn(i) or
+                check.arg2.depOn(i))
+            {
+                last_dep = j;
+            }
+        }
+
+        function.instructions.items[i].last_dep = last_dep;
+    }
 }
 
 pub fn regAllocFunction(
     ri: *const arch.RegisterInfo,
     alloc: Allocator,
-    fir: FunctionIR,
+    function: *const FunctionIR,
 ) RegAllocError!AllocatedFunction {
     _ = ri;
     _ = alloc;
-    _ = fir;
+    _ = function;
 
     return RegAllocError.OutOfMemory;
 }

@@ -30,6 +30,28 @@ pub const Operand = union(enum) {
     fn_name: []const u8,
     int: usize,
     unused,
+
+    pub fn depOn(self: Operand, ref: usize) bool {
+        return switch (self) {
+            .reference => |r| r == ref,
+            else => false,
+        };
+    }
+
+    pub fn depOnVar(
+        self: Operand,
+        var_name: []const u8,
+    ) bool {
+        return switch (self) {
+            .variable => |v| std.mem.eql(
+                u8,
+                v,
+                var_name,
+            ),
+
+            else => false,
+        };
+    }
 };
 
 pub const ThreeAddressCode = struct {
@@ -39,7 +61,7 @@ pub const ThreeAddressCode = struct {
 
     // Calculated and used during
     // register allocation
-    last_used: usize = 0,
+    last_dep: usize = 0,
 };
 
 pub const Operator = union(enum) {

@@ -77,11 +77,11 @@ pub fn main(init: std.process.Init) !void {
     const ir = try umi.ir_gen.genIr(alloc, &tl);
     tl.ir = ir;
 
-    for (tl.ir.functions.get("main").?
-        .instructions.items) |instr|
-    {
-        std.debug.print("{any}\n", .{instr});
-    }
-
     try umi.reg_alloc.regAlloc(alloc, &tl, .x86_64);
+
+    for (tl.ir.functions.get("main").?
+        .instructions.items, 0..) |instr, i|
+    {
+        std.debug.print("{} - {any}\n", .{ i, instr });
+    }
 }
