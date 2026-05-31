@@ -1,4 +1,4 @@
-/// If statement that enforces scoping rules by double declaring a variable after
+//! If statement that enforces scoping rules by double declaring a variable after
 
 fn main() -> void {
     let mut a: u32 = 10;

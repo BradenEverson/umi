@@ -1,4 +1,4 @@
-/// Little sample program testing the byte parsing automatic feature :)
+//! Little sample program testing the byte parsing automatic feature :)
 
 enum PacketCode(u8) {
     nop(0x00),

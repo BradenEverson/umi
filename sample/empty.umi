@@ -1,4 +1,4 @@
-/// An empty main
+//! An empty main
 
 struct Bar {
     val: f64,

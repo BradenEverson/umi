@@ -1,4 +1,4 @@
-/// Scope blocks (necessary for else statements to really work how I want them too
+//! Scope blocks (necessary for else statements to really work how I want them too
 
 fn main() -> void {
     // This would be nice, kinda like what Rust does, maybe later
