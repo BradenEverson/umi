@@ -49,6 +49,7 @@ pub const Operator = union(enum) {
 
     if_true_goto,
     if_false_goto,
+    goto,
 
     assignment,
     return_something,
@@ -265,10 +266,31 @@ pub fn exprToIr(
 
             _ = try exprToIr(alloc, i.if_stuff, tl, function);
 
-            try function.instructions.append(
-                alloc,
-                .{ .op = .{ .label = l } },
-            );
+            if (i.else_stuff) |el| {
+                const l2 = nextLabel();
+
+                try function.instructions.append(
+                    alloc,
+                    .{ .op = .goto, .arg1 = .{ .int = l2 } },
+                );
+
+                try function.instructions.append(
+                    alloc,
+                    .{ .op = .{ .label = l } },
+                );
+
+                _ = try exprToIr(alloc, el, tl, function);
+
+                try function.instructions.append(
+                    alloc,
+                    .{ .op = .{ .label = l2 } },
+                );
+            } else {
+                try function.instructions.append(
+                    alloc,
+                    .{ .op = .{ .label = l } },
+                );
+            }
 
             return .unused;
         },

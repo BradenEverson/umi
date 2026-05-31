@@ -156,7 +156,7 @@ pub const Expr = union(enum) {
     if_statement: struct {
         cond: *Expr,
         if_stuff: *Expr,
-        //else_stuff: ?*Expr,
+        else_stuff: ?*Expr = null,
     },
 
     block: struct {
@@ -234,6 +234,11 @@ pub const Expr = union(enum) {
 
                 i.if_stuff.deinit(alloc);
                 alloc.destroy(i.if_stuff);
+
+                if (i.else_stuff) |el| {
+                    el.deinit(alloc);
+                    alloc.destroy(el);
+                }
             },
 
             .block => |*i| {
@@ -607,6 +612,14 @@ pub fn statement(
                         .if_stuff = if_stuff,
                     },
                 };
+
+                const p = self.peekTok();
+                if (p.tag == .keyword and p.kw().? == .else_kw) {
+                    // We got an else
+                    try self.consume(.keyword);
+                    const else_stuff = try self.statement(alloc);
+                    if_stmnt.if_statement.else_stuff = else_stuff;
+                }
 
                 return if_stmnt;
             },

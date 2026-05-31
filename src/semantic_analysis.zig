@@ -174,6 +174,8 @@ fn nameResolveAst(
         .if_statement => |is| {
             try nameResolveAst(alloc, tl, scope, is.cond);
             try nameResolveAst(alloc, tl, scope, is.if_stuff);
+            if (is.else_stuff) |el|
+                try nameResolveAst(alloc, tl, scope, el);
         },
         .block => |*b| {
             b.scope.parent = scope;
@@ -309,6 +311,9 @@ pub fn typeCheckExpr(
                 return TypeCheckError.ExpectedABool;
 
             try typeCheckExpr(tl, scope, fn_ret_ty, f.if_stuff);
+
+            if (f.else_stuff) |el|
+                try typeCheckExpr(tl, scope, fn_ret_ty, el);
         },
 
         .block => |b| {

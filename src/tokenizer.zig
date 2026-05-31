@@ -12,6 +12,7 @@ pub const Keyword = enum {
     mut,
     fn_kw,
     if_kw,
+    else_kw,
     struct_kw,
     enum_kw,
     defer_kw,
@@ -26,6 +27,7 @@ pub const KeywordLookup =
     std.StaticStringMap(Keyword).initComptime(.{
         .{ "for", .for_kw },
         .{ "if", .if_kw },
+        .{ "else", .else_kw },
         .{ "while", .while_kw },
         .{ "let", .let },
         .{ "mut", .mut },
