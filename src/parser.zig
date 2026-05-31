@@ -56,7 +56,7 @@ pub const Scope = struct {
 
 pub const Function = struct {
     parameters: std.ArrayList(struct { []const u8, []const u8 }) = .empty,
-    scope: Scope = .{},
+    scope: Scope,
 
     returns: []const u8 = "void",
     body: Ast = .{},
@@ -78,6 +78,7 @@ pub const Function = struct {
 pub const TopLevel = struct {
     types: std.StringHashMapUnmanaged(Type) = .empty,
     functions: std.StringHashMapUnmanaged(Function) = .empty,
+    global_scope: Scope = .{},
     ir: ProgramIR = .{},
 
     pub fn getType(tl: *TopLevel, ty: []const u8) ?Type {
@@ -503,7 +504,11 @@ pub fn parse(
                 );
             },
             .fn_kw => {
-                var func: Function = .{};
+                var func: Function = .{
+                    .scope = .{
+                        .parent = &tl.global_scope,
+                    },
+                };
                 errdefer func.deinit(alloc);
 
                 const fn_name = self.peekTok().data;
