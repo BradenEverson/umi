@@ -1,0 +1,28 @@
+//! Testing return flow for if statementy stuff
+
+fn foo_valid(a: u32) -> u32 {
+    if (a < 10) {
+        return a * a;
+    } else {
+        return a * a * a;
+    }
+}
+
+// fn foo_invalid(a: u32) -> u32 {
+//     if (a < 10) {
+//         return a * a;
+//     } else {}
+// }
+
+fn foo_valid_again(a: u32) -> u32 {
+    if (a < 10) {
+        return a * a;
+    } else {}
+
+    return a * a * a;
+}
+
+fn main() -> void {
+    foo_valid(10);
+    foo_valid_again(100);
+}

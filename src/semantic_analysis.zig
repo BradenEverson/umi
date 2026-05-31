@@ -117,7 +117,31 @@ fn exprReturns(expr: *const Expr) bool {
         // constructs will need to call this recursively
         // you feel
         .return_val => return true,
-        .assignment, .binary_op, .construction, .fn_call, .literal, .unary_op, .variable, .if_statement, .while_loop, .block => return false,
+        .if_statement => |i| {
+            var ret = exprReturns(i.if_stuff);
+            if (i.else_stuff) |el| {
+                ret = ret and exprReturns(el);
+            }
+
+            return ret;
+        },
+        .while_loop => |w| return exprReturns(w.do_stuff),
+        .block => |b| {
+            var valid = false;
+            for (b.block.items) |e| {
+                if (exprReturns(e)) valid = true;
+            }
+            return valid;
+        },
+
+        .assignment,
+        .binary_op,
+        .construction,
+        .fn_call,
+        .literal,
+        .unary_op,
+        .variable,
+        => return false,
     }
 }
 
