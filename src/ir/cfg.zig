@@ -26,9 +26,37 @@ pub const CfgError = Allocator.Error;
 
 const CFG = @This();
 
-pub fn fromIr(stream: []TAC) CfgError!CFG {
-    _ = stream;
-    const cfg: CFG = .{};
+fn isLeader(
+    stream: []const TAC,
+    idx: usize,
+) bool {
+    const is_label =
+        stream[idx].op == .label;
+
+    return is_label;
+}
+
+pub fn fromIr(
+    alloc: Allocator,
+    stream: []TAC,
+) CfgError!CFG {
+    var cfg: CFG = .{};
+
+    var i: usize = 0;
+    var j: usize = 1;
+    while (j < stream.len) {
+        if (isLeader(stream, j)) {
+            const bb = BasicBlock{
+                .instructions = stream[i..j],
+            };
+            i = j;
+
+            try cfg.blocks.append(alloc, bb);
+        }
+        j += 1;
+    }
+
+    // TODO: Now we need to get all of the connections
 
     return cfg;
 }
