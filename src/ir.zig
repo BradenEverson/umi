@@ -10,6 +10,8 @@ const Literal = parser.Literal;
 const BinaryOp = parser.BinaryOp;
 const UnaryOp = parser.UnaryOp;
 
+const ControlFlowGraph = @import("ir/cfg.zig");
+
 const Type = @import("type.zig").Type;
 
 pub const IrError = std.mem.Allocator.Error;
@@ -83,6 +85,7 @@ pub const Operator = union(enum) {
 pub const FunctionIR = struct {
     instructions: std.ArrayList(ThreeAddressCode) =
         .empty,
+    cfg: ControlFlowGraph = .{},
 };
 
 pub const ProgramIR = struct {
