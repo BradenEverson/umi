@@ -21,3 +21,14 @@ pub const BasicBlock = struct {
 };
 
 blocks: std.ArrayList(BasicBlock) = .empty,
+
+pub const CfgError = Allocator.Error;
+
+const CFG = @This();
+
+pub fn fromIr(stream: []TAC) CfgError!CFG {
+    _ = stream;
+    const cfg: CFG = .{};
+
+    return cfg;
+}
