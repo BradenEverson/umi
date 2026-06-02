@@ -77,11 +77,22 @@ pub fn main(init: std.process.Init) !void {
     const ir = try umi.ir_gen.genIr(alloc, &tl);
     tl.ir = ir;
 
-    try umi.reg_alloc.regAlloc(alloc, &tl, .x86_64);
+    var cfg = try umi.ir_gen.ControlFlowGraph.fromIr(
+        alloc,
+        tl.ir.functions.get("main").?.instructions.items,
+    );
+    defer cfg.deinit(alloc);
 
-    for (tl.ir.functions.get("main").?
-        .instructions.items, 0..) |instr, i|
-    {
-        std.debug.print("{} - {any}\n", .{ i, instr });
+    for (cfg.blocks.items) |bb| {
+        std.debug.print("{any}\n", .{bb});
     }
+
+    // try umi.reg_alloc.regAlloc(alloc, &tl, .x86_64);
+    //
+    // for (tl.ir.functions.get("main").?
+    //     .instructions.items, 0..) |instr, i|
+    // {
+    //     std.debug.print("{} - {any}\n", .{ i, instr });
+    // }
+
 }

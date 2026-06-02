@@ -67,7 +67,6 @@ pub fn regAlloc(
 
     var functions = tl.ir.functions.iterator();
     while (functions.next()) |function| {
-        std.debug.print("doing live analysis\n", .{});
         try liveAnalysis(function.value_ptr);
 
         // _ = try regAllocFunction(

@@ -10,7 +10,7 @@ const Literal = parser.Literal;
 const BinaryOp = parser.BinaryOp;
 const UnaryOp = parser.UnaryOp;
 
-const ControlFlowGraph = @import("ir/cfg.zig");
+pub const ControlFlowGraph = @import("ir/cfg.zig");
 
 const Type = @import("type.zig").Type;
 

@@ -36,6 +36,13 @@ fn isLeader(
     return is_label;
 }
 
+pub fn deinit(cfg: *CFG, alloc: Allocator) void {
+    for (cfg.blocks.items) |*bb|
+        bb.deinit(alloc);
+
+    cfg.blocks.deinit(alloc);
+}
+
 pub fn fromIr(
     alloc: Allocator,
     stream: []TAC,
@@ -55,6 +62,11 @@ pub fn fromIr(
         }
         j += 1;
     }
+
+    const bb = BasicBlock{
+        .instructions = stream[i..],
+    };
+    try cfg.blocks.append(alloc, bb);
 
     // TODO: Now we need to get all of the connections
 
