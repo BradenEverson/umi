@@ -88,7 +88,7 @@ pub fn main(init: std.process.Init) !void {
     defer cfg.deinit(alloc);
 
     for (cfg.blocks.items) |bb| {
-        std.debug.print("{} instructions - {} connections\n", .{ bb.instructions.len, bb.connections.items.len });
+        std.debug.print("{} instructions - {} connections - {} predecessors \n", .{ bb.instructions.len, bb.connections.items.len, bb.predecessors.items.len });
     }
 
     // try umi.reg_alloc.regAlloc(alloc, &tl, .x86_64);

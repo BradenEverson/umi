@@ -14,9 +14,11 @@ pub const BasicBlock = struct {
     // like conditional etc
     connections: std.ArrayList(usize) =
         .empty,
+    predecessors: std.ArrayList(usize) = .empty,
 
     pub fn deinit(bb: *BasicBlock, alloc: Allocator) void {
         bb.connections.deinit(alloc);
+        bb.predecessors.deinit(alloc);
     }
 };
 
@@ -118,6 +120,12 @@ pub fn fromIr(
                 if (block_idx + 1 < cfg.blocks.items.len)
                     try bb.connections.append(alloc, block_idx + 1);
             },
+        }
+    }
+
+    for (cfg.blocks.items, 0..) |*bb, block_idx| {
+        for (bb.connections.items) |succ_idx| {
+            try cfg.blocks.items[succ_idx].predecessors.append(alloc, block_idx);
         }
     }
 
