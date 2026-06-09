@@ -95,8 +95,33 @@ pub fn main(init: std.process.Init) !void {
         alloc,
         &cfg,
     );
-
     defer live_analysis.deinit(alloc);
+
+    for (cfg.blocks.items, 0..) |bb, i| {
+        std.debug.print("Block {}\n", .{i});
+
+        for (bb.instructions, 0..) |tac, j| {
+            std.debug.print("  [{d}] {any}\n", .{ j, tac });
+        }
+
+        std.debug.print("  use: ", .{});
+        var use_it = live_analysis.use[i].keyIterator();
+        while (use_it.next()) |k| std.debug.print("{s} ", .{k.*});
+
+        std.debug.print("\n  def: ", .{});
+        var def_it = live_analysis.def[i].keyIterator();
+        while (def_it.next()) |k| std.debug.print("{s} ", .{k.*});
+
+        std.debug.print("\n  in:  ", .{});
+        var in_it = live_analysis.in[i].keyIterator();
+        while (in_it.next()) |k| std.debug.print("{s} ", .{k.*});
+
+        std.debug.print("\n  out: ", .{});
+        var out_it = live_analysis.out[i].keyIterator();
+        while (out_it.next()) |k| std.debug.print("{s} ", .{k.*});
+
+        std.debug.print("\n\n", .{});
+    }
 
     // try umi.reg_alloc.regAlloc(alloc, &tl, .x86_64);
     //

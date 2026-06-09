@@ -1,0 +1,9 @@
+//! Sample program where variables live across blocks
+
+fn main() -> void {
+    let mut a: u32 = 10;
+    if (a == 10) {
+        a = 15;
+    }
+    let b: u32 = a;
+}
