@@ -321,9 +321,15 @@ pub fn exprToIr(
         },
 
         .while_loop => |w| {
-            const cond = try exprToIr(alloc, w.cond, tl, function);
             const l1 = nextLabel();
             const l2 = nextLabel();
+
+            try function.instructions.append(
+                alloc,
+                .{ .op = .{ .label = l1 } },
+            );
+
+            const cond = try exprToIr(alloc, w.cond, tl, function);
 
             const branch = ThreeAddressCode{
                 .op = .if_false_goto,
@@ -331,10 +337,6 @@ pub fn exprToIr(
                 .arg2 = .{ .int = l2 },
             };
 
-            try function.instructions.append(
-                alloc,
-                .{ .op = .{ .label = l1 } },
-            );
             try function.instructions.append(alloc, branch);
 
             _ = try exprToIr(alloc, w.do_stuff, tl, function);

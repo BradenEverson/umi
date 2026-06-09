@@ -48,27 +48,78 @@ pub fn fromIr(
     stream: []TAC,
 ) CfgError!CFG {
     var cfg: CFG = .{};
+    if (stream.len == 0) return cfg;
 
-    var i: usize = 0;
-    var j: usize = 1;
-    while (j < stream.len) {
-        if (isLeader(stream, j)) {
-            const bb = BasicBlock{
-                .instructions = stream[i..j],
-            };
-            i = j;
+    var leaders = try std.DynamicBitSet.initEmpty(alloc, stream.len);
+    defer leaders.deinit();
 
-            try cfg.blocks.append(alloc, bb);
-        }
-        j += 1;
+    leaders.set(0);
+
+    for (stream, 0..) |tac, i| {
+        const is_branch = switch (tac.op) {
+            .if_true_goto, .if_false_goto, .goto => true,
+            else => false,
+        };
+        const is_label = switch (tac.op) {
+            .label => true,
+            else => false,
+        };
+
+        if (is_label) leaders.set(i);
+
+        if (is_branch and i + 1 < stream.len)
+            leaders.set(i + 1);
     }
 
-    const bb = BasicBlock{
-        .instructions = stream[i..],
-    };
-    try cfg.blocks.append(alloc, bb);
+    var label_to_block = std.AutoHashMap(usize, usize).init(alloc);
+    defer label_to_block.deinit();
 
-    // TODO: Now we need to get all of the connections
+    var block_start: usize = 0;
+    for (1..stream.len + 1) |i| {
+        const at_end = i == stream.len;
+        const at_leader = !at_end and leaders.isSet(i);
+
+        if (at_end or at_leader) {
+            const block_idx = cfg.blocks.items.len;
+            try cfg.blocks.append(alloc, .{
+                .instructions = stream[block_start..i],
+            });
+
+            const first = stream[block_start];
+            if (first.op == .label) {
+                const lbl = first.op.label;
+                try label_to_block.put(lbl, block_idx);
+            }
+
+            block_start = i;
+        }
+    }
+
+    for (cfg.blocks.items, 0..) |*bb, block_idx| {
+        if (bb.instructions.len == 0) continue;
+        const last = bb.instructions[bb.instructions.len - 1];
+
+        switch (last.op) {
+            .goto => {
+                const target_lbl = last.arg1.int;
+                if (label_to_block.get(target_lbl)) |target_idx|
+                    try bb.connections.append(alloc, target_idx);
+            },
+            .if_true_goto, .if_false_goto => {
+                if (block_idx + 1 < cfg.blocks.items.len)
+                    try bb.connections.append(alloc, block_idx + 1);
+
+                const target_lbl = last.arg2.int;
+                if (label_to_block.get(target_lbl)) |target_idx|
+                    try bb.connections.append(alloc, target_idx);
+            },
+            .return_something => {},
+            else => {
+                if (block_idx + 1 < cfg.blocks.items.len)
+                    try bb.connections.append(alloc, block_idx + 1);
+            },
+        }
+    }
 
     return cfg;
 }
