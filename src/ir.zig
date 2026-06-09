@@ -11,6 +11,7 @@ const BinaryOp = parser.BinaryOp;
 const UnaryOp = parser.UnaryOp;
 
 pub const ControlFlowGraph = @import("ir/cfg.zig");
+pub const LiveAnalysis = @import("ir/live_analysis.zig");
 
 const Type = @import("type.zig").Type;
 
@@ -365,4 +366,9 @@ pub fn exprToIr(
             return .unused;
         },
     }
+}
+
+test {
+    _ = @import("ir/cfg.zig");
+    _ = @import("ir/live_analysis.zig");
 }

@@ -364,7 +364,7 @@ pub fn typeCheckExpr(
 
 test "type resolution" {
     var tl: TopLevel = .{};
-    var f: parser.Function = .{};
+    var f: parser.Function = .{ .scope = .{} };
 
     var a: Expr = .{ .literal = .{ .int = 1 } };
     var b: Expr = .{ .literal = .{ .int = 2 } };
@@ -377,13 +377,13 @@ test "type resolution" {
         },
     };
 
-    const ty = try exprEvalsTo(&tl, &f, &apb);
+    const ty = try exprEvalsTo(&tl, &f.scope, &apb);
     try std.testing.expectEqual(.its_a_comptime_number, ty);
 }
 
 test "variable type resolution" {
     var tl: TopLevel = .{};
-    var f: parser.Function = .{};
+    var f: parser.Function = .{ .scope = .{} };
     defer f.deinit(std.testing.allocator);
 
     try f.scope.variables.put(
@@ -396,7 +396,7 @@ test "variable type resolution" {
     );
 
     const variable: Expr = .{ .variable = "A" };
-    const ty = try exprEvalsTo(&tl, &f, &variable);
+    const ty = try exprEvalsTo(&tl, &f.scope, &variable);
 
     try std.testing.expectEqual(32, ty.its_an_int.bits);
     try std.testing.expectEqual(.unsigned, ty.its_an_int.signed);
@@ -404,7 +404,7 @@ test "variable type resolution" {
 
 test "binary op type resolution" {
     var tl: TopLevel = .{};
-    var f: parser.Function = .{};
+    var f: parser.Function = .{ .scope = .{} };
     defer f.deinit(std.testing.allocator);
 
     try f.scope.variables.put(
@@ -424,7 +424,7 @@ test "binary op type resolution" {
         .left = &constant,
         .op = .add,
     } };
-    const ty = try exprEvalsTo(&tl, &f, &sum);
+    const ty = try exprEvalsTo(&tl, &f.scope, &sum);
 
     try std.testing.expectEqual(.float16, ty.its_a_float);
 }

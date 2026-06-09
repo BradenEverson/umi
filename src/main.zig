@@ -91,6 +91,13 @@ pub fn main(init: std.process.Init) !void {
         std.debug.print("{} instructions - {} connections - {} predecessors \n", .{ bb.instructions.len, bb.connections.items.len, bb.predecessors.items.len });
     }
 
+    var live_analysis = try umi.ir_gen.LiveAnalysis.analyze(
+        alloc,
+        &cfg,
+    );
+
+    defer live_analysis.deinit(alloc);
+
     // try umi.reg_alloc.regAlloc(alloc, &tl, .x86_64);
     //
     // for (tl.ir.functions.get("main").?
