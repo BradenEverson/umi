@@ -36,16 +36,18 @@ pub fn isLiveIn(
     return info.in[block_idx].contains(name);
 }
 
+const Set = std.StringHashMapUnmanaged(void);
+
 pub fn analyze(
     alloc: Allocator,
     cfg: *const CFG,
 ) !LivenessInfo {
     const n = cfg.blocks.items.len;
 
-    const use = try alloc.alloc(std.StringHashMapUnmanaged(void), n);
-    const def = try alloc.alloc(std.StringHashMapUnmanaged(void), n);
-    const in = try alloc.alloc(std.StringHashMapUnmanaged(void), n);
-    const out = try alloc.alloc(std.StringHashMapUnmanaged(void), n);
+    const use = try alloc.alloc(Set, n);
+    const def = try alloc.alloc(Set, n);
+    const in = try alloc.alloc(Set, n);
+    const out = try alloc.alloc(Set, n);
 
     for (0..n) |i| {
         use[i] = .{};
