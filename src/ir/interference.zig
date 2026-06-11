@@ -12,16 +12,4 @@ pub const Value = union(enum) {
             .temporary => |i| b == .temporary and i == b.temporary,
         };
     }
-
-    pub fn format(
-        v: Value,
-        comptime _: []const u8,
-        _: std.fmt.FormatOptions,
-        writer: anytype,
-    ) !void {
-        switch (v) {
-            .variable => |n| try writer.print("{s}", .{n}),
-            .temporary => |i| try writer.print("t{}", .{i}),
-        }
-    }
 };
