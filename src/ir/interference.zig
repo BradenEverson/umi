@@ -13,3 +13,5 @@ pub const Value = union(enum) {
         };
     }
 };
+
+pub const InterferenceGraph = struct {};
