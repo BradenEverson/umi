@@ -12,6 +12,7 @@ const UnaryOp = parser.UnaryOp;
 
 pub const ControlFlowGraph = @import("ir/cfg.zig");
 pub const LiveAnalysis = @import("ir/live_analysis.zig");
+pub const InterferenceGraph = @import("ir/interference.zig");
 
 const Type = @import("type.zig").Type;
 

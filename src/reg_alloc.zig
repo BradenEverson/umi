@@ -13,6 +13,8 @@ const ir = @import("ir.zig");
 const FunctionIR = ir.FunctionIR;
 const ThreeAddressCode = ir.ThreeAddressCode;
 const Operand = ir.Operand;
+const CFG = ir.ControlFlowGraph;
+const InterferenceGraph = ir.InterferenceGraph;
 
 const arch = @import("arch.zig");
 
@@ -60,6 +62,7 @@ pub fn regAlloc(
     alloc: Allocator,
     tl: *TopLevel,
     target: arch.Arch,
+    cfg: *
 ) RegAllocError!void {
     const ri = arch.registerInfo(target);
     _ = ri;
@@ -77,38 +80,38 @@ pub fn regAlloc(
     }
 }
 
-pub fn liveAnalysis(
-    function: *FunctionIR,
-) RegAllocError!void {
-    // TODO: This only goes forwards, after some research
-    // it looks like we need iterative dataflow analysis
-    // to handle things like loops and such
-    //
-    // https://www.cs.princeton.edu/courses/archive/spr03/cs320/notes/analysis2.pdf
-    for (0..function.instructions.items.len) |i| {
-        const curr = function.instructions.items[i];
-        var last_dep = i;
-
-        for (i..function.instructions.items.len) |j| {
-            const check = function.instructions.items[j];
-            if (curr.op == .assignment) {
-                const variable = curr.arg1.variable;
-
-                if (check.arg1.depOnVar(variable) or
-                    check.arg2.depOnVar(variable))
-                {
-                    last_dep = j;
-                }
-            } else if (check.arg1.depOn(i) or
-                check.arg2.depOn(i))
-            {
-                last_dep = j;
-            }
-        }
-
-        function.instructions.items[i].last_dep = last_dep;
-    }
-}
+// pub fn liveAnalysis(
+//     function: *FunctionIR,
+// ) RegAllocError!void {
+//     // TODO: This only goes forwards, after some research
+//     // it looks like we need iterative dataflow analysis
+//     // to handle things like loops and such
+//     //
+//     // https://www.cs.princeton.edu/courses/archive/spr03/cs320/notes/analysis2.pdf
+//     for (0..function.instructions.items.len) |i| {
+//         const curr = function.instructions.items[i];
+//         var last_dep = i;
+//
+//         for (i..function.instructions.items.len) |j| {
+//             const check = function.instructions.items[j];
+//             if (curr.op == .assignment) {
+//                 const variable = curr.arg1.variable;
+//
+//                 if (check.arg1.depOnVar(variable) or
+//                     check.arg2.depOnVar(variable))
+//                 {
+//                     last_dep = j;
+//                 }
+//             } else if (check.arg1.depOn(i) or
+//                 check.arg2.depOn(i))
+//             {
+//                 last_dep = j;
+//             }
+//         }
+//
+//         function.instructions.items[i].last_dep = last_dep;
+//     }
+// }
 
 pub fn regAllocFunction(
     ri: *const arch.RegisterInfo,

@@ -123,12 +123,18 @@ pub fn main(init: std.process.Init) !void {
         std.debug.print("\n\n", .{});
     }
 
-    // try umi.reg_alloc.regAlloc(alloc, &tl, .x86_64);
-    //
-    // for (tl.ir.functions.get("main").?
-    //     .instructions.items, 0..) |instr, i|
-    // {
-    //     std.debug.print("{} - {any}\n", .{ i, instr });
-    // }
+    var igraph = try umi.ir_gen.InterferenceGraph.build(
+        alloc,
+        &cfg,
+        &live_analysis,
+    );
+    defer igraph.deinit(alloc);
 
+    try umi.reg_alloc.regAlloc(alloc, &tl, .x86_64);
+
+    for (tl.ir.functions.get("main").?
+        .instructions.items, 0..) |instr, i|
+    {
+        std.debug.print("{} - {any}\n", .{ i, instr });
+    }
 }
