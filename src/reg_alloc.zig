@@ -62,15 +62,19 @@ pub fn regAlloc(
     alloc: Allocator,
     tl: *TopLevel,
     target: arch.Arch,
-    cfg: *
 ) RegAllocError!void {
     const ri = arch.registerInfo(target);
     _ = ri;
-    _ = alloc;
 
     var functions = tl.ir.functions.iterator();
     while (functions.next()) |function| {
-        try liveAnalysis(function.value_ptr);
+        var cfg = try CFG.fromIr(
+            alloc,
+            function.value_ptr.instructions.items,
+        );
+        defer cfg.deinit(alloc);
+
+        // try liveAnalysis(function.value_ptr);
 
         // _ = try regAllocFunction(
         //     ri,
