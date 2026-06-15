@@ -21,6 +21,17 @@ pub const Value = union(enum) {
     }
 };
 
+pub const Node = struct {
+    val: Value,
+    edges: std.ArrayList(usize) = .empty,
+
+    pub fn deinit(self: *Node, alloc: Allocator) void {
+        self.edges.deinit(alloc);
+    }
+};
+
+nodes: std.ArrayList(Node) = .empty,
+
 pub const InterferenceGraphError = Allocator.Error;
 const InterferenceGraph = @This();
 
@@ -28,8 +39,10 @@ pub fn deinit(
     igraph: *InterferenceGraph,
     alloc: Allocator,
 ) void {
-    _ = igraph;
-    _ = alloc;
+    for (igraph.nodes.items) |*node|
+        node.deinit(alloc);
+
+    igraph.nodes.deinit(alloc);
 }
 
 pub fn build(
