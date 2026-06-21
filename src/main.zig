@@ -16,8 +16,7 @@ pub fn main(init: std.process.Init) !void {
     var source: []u8 = undefined;
 
     if (args.next()) |file_path| {
-        source = try std.Io.Dir.cwd()
-            .readFileAlloc(
+        source = try std.Io.Dir.cwd().readFileAlloc(
             io,
             file_path,
             alloc,
