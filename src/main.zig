@@ -76,9 +76,9 @@ pub fn main(init: std.process.Init) !void {
     const ir = try umi.ir_gen.genIr(alloc, &tl);
     tl.ir = ir;
 
-    for (ir.functions.get("main").?.instructions.items) |tac| {
-        std.debug.print("{any}\n", .{tac});
-    }
+    // for (ir.functions.get("main").?.instructions.items) |tac| {
+    //     std.debug.print("{any}\n", .{tac});
+    // }
 
     var cfg = try umi.ir_gen.ControlFlowGraph.fromIr(
         alloc,
@@ -86,9 +86,9 @@ pub fn main(init: std.process.Init) !void {
     );
     defer cfg.deinit(alloc);
 
-    for (cfg.blocks.items) |bb| {
-        std.debug.print("{} instructions - {} connections - {} predecessors \n", .{ bb.instructions.len, bb.connections.items.len, bb.predecessors.items.len });
-    }
+    // for (cfg.blocks.items) |bb| {
+    //     std.debug.print("{} instructions - {} connections - {} predecessors \n", .{ bb.instructions.len, bb.connections.items.len, bb.predecessors.items.len });
+    // }
 
     var live_analysis = try umi.ir_gen.LiveAnalysis.analyze(
         alloc,
@@ -96,31 +96,31 @@ pub fn main(init: std.process.Init) !void {
     );
     defer live_analysis.deinit(alloc);
 
-    for (cfg.blocks.items, 0..) |bb, i| {
-        std.debug.print("Block {}\n", .{i});
-
-        for (bb.instructions, 0..) |tac, j| {
-            std.debug.print("  [{d}] {any}\n", .{ j, tac });
-        }
-
-        std.debug.print("  use: ", .{});
-        var use_it = live_analysis.use[i].keyIterator();
-        while (use_it.next()) |k| std.debug.print("{s} ", .{k.*});
-
-        std.debug.print("\n  def: ", .{});
-        var def_it = live_analysis.def[i].keyIterator();
-        while (def_it.next()) |k| std.debug.print("{s} ", .{k.*});
-
-        std.debug.print("\n  in:  ", .{});
-        var in_it = live_analysis.in[i].keyIterator();
-        while (in_it.next()) |k| std.debug.print("{s} ", .{k.*});
-
-        std.debug.print("\n  out: ", .{});
-        var out_it = live_analysis.out[i].keyIterator();
-        while (out_it.next()) |k| std.debug.print("{s} ", .{k.*});
-
-        std.debug.print("\n\n", .{});
-    }
+    // for (cfg.blocks.items, 0..) |bb, i| {
+    //     std.debug.print("Block {}\n", .{i});
+    //
+    //     for (bb.instructions, 0..) |tac, j| {
+    //         std.debug.print("  [{d}] {any}\n", .{ j, tac });
+    //     }
+    //
+    //     std.debug.print("  use: ", .{});
+    //     var use_it = live_analysis.use[i].keyIterator();
+    //     while (use_it.next()) |k| std.debug.print("{s} ", .{k.*});
+    //
+    //     std.debug.print("\n  def: ", .{});
+    //     var def_it = live_analysis.def[i].keyIterator();
+    //     while (def_it.next()) |k| std.debug.print("{s} ", .{k.*});
+    //
+    //     std.debug.print("\n  in:  ", .{});
+    //     var in_it = live_analysis.in[i].keyIterator();
+    //     while (in_it.next()) |k| std.debug.print("{s} ", .{k.*});
+    //
+    //     std.debug.print("\n  out: ", .{});
+    //     var out_it = live_analysis.out[i].keyIterator();
+    //     while (out_it.next()) |k| std.debug.print("{s} ", .{k.*});
+    //
+    //     std.debug.print("\n\n", .{});
+    // }
 
     var igraph = try umi.ir_gen.InterferenceGraph.build(
         alloc,
@@ -129,7 +129,15 @@ pub fn main(init: std.process.Init) !void {
     );
     defer igraph.deinit(alloc);
 
-    try umi.reg_alloc.regAlloc(alloc, &tl, .x86_64);
+    var allocations = try umi.reg_alloc.regAlloc(alloc, &tl, .x86_64);
+    defer {
+        var allocs = allocations.iterator();
+        while (allocs.next()) |a| {
+            a.value_ptr.layout.deinit(alloc);
+        }
+
+        allocations.deinit(alloc);
+    }
 
     for (tl.ir.functions.get("main").?
         .instructions.items, 0..) |instr, i|

@@ -45,18 +45,98 @@ pub fn deinit(
     igraph.nodes.deinit(alloc);
 }
 
+fn getOrAddNode(
+    igraph: *InterferenceGraph,
+    alloc: Allocator,
+    val: Value,
+) Allocator.Error!usize {
+    for (igraph.nodes.items, 0..) |node, i|
+        if (node.val.eql(val)) return i;
+
+    const idx = igraph.nodes.items.len;
+    try igraph.nodes.append(alloc, .{ .val = val });
+    return idx;
+}
+
+fn addEdge(
+    igraph: *InterferenceGraph,
+    alloc: Allocator,
+    a: usize,
+    b: usize,
+) Allocator.Error!void {
+    if (a == b) return;
+
+    for (igraph.nodes.items[a].edges.items) |e|
+        if (e == b) return;
+
+    try igraph.nodes.items[a].edges.append(alloc, b);
+    try igraph.nodes.items[b].edges.append(alloc, a);
+}
+
 pub fn build(
     alloc: Allocator,
     cfg: *const CFG,
     live: *const LivenessInfo,
 ) InterferenceGraphError!InterferenceGraph {
-    _ = alloc;
-    _ = live;
+    var igraph: InterferenceGraph = .{};
+    errdefer igraph.deinit(alloc);
 
-    for (0..cfg.blocks.items.len) |i| {
-        const idx = cfg.blocks.items.len - i - 1;
-        _ = idx;
+    for (cfg.blocks.items, 0..) |bb, block_idx| {
+        var live_now: std.StringHashMapUnmanaged(void) = .{};
+        defer live_now.deinit(alloc);
+
+        var out_it = live.out[block_idx].keyIterator();
+        while (out_it.next()) |k|
+            try live_now.put(alloc, k.*, {});
+
+        var i = bb.instructions.len;
+        while (i > 0) {
+            i -= 1;
+            const tac = bb.instructions[i];
+            const is_move = tac.op == .assignment;
+
+            const def_name: ?[]const u8 =
+                if (is_move and tac.arg1 == .variable)
+                    tac.arg1.variable
+                else
+                    null;
+
+            const move_src: ?[]const u8 =
+                if (is_move and tac.arg2 == .variable)
+                    tac.arg2.variable
+                else
+                    null;
+
+            if (move_src) |s| _ = live_now.remove(s);
+
+            if (def_name) |d| {
+                const d_idx = try igraph.getOrAddNode(
+                    alloc,
+                    .{ .variable = d },
+                );
+
+                var live_it = live_now.keyIterator();
+                while (live_it.next()) |v| {
+                    const v_idx = try igraph.getOrAddNode(
+                        alloc,
+                        .{ .variable = v.* },
+                    );
+                    try igraph.addEdge(alloc, d_idx, v_idx);
+                }
+
+                _ = live_now.remove(d);
+            }
+
+            if (move_src) |s| {
+                try live_now.put(alloc, s, {});
+            } else {
+                if (tac.arg1 == .variable)
+                    try live_now.put(alloc, tac.arg1.variable, {});
+                if (tac.arg2 == .variable)
+                    try live_now.put(alloc, tac.arg2.variable, {});
+            }
+        }
     }
 
-    return InterferenceGraphError.OutOfMemory;
+    return igraph;
 }
