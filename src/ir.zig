@@ -33,6 +33,31 @@ pub const Operand = union(enum) {
     int: usize,
     unused,
 
+    pub fn format(
+        self: Operand,
+        writer: *std.Io.Writer,
+    ) !void {
+        switch (self) {
+            .reference => |t| {
+                try writer.print("t{}", .{t});
+            },
+
+            .literal => |l| {
+                try writer.print("{f}", .{l});
+            },
+
+            .variable, .fn_name => |s| {
+                try writer.print("{s}", .{s});
+            },
+
+            .int => |i| {
+                try writer.print("{}", .{i});
+            },
+
+            .unused => {},
+        }
+    }
+
     pub fn depOn(self: Operand, ref: usize) bool {
         return switch (self) {
             .reference => |r| r == ref,
@@ -64,6 +89,77 @@ pub const ThreeAddressCode = struct {
     // Calculated and used during
     // register allocation
     last_dep: usize = 0,
+
+    pub fn format(
+        self: ThreeAddressCode,
+        writer: *std.Io.Writer,
+    ) !void {
+        switch (self.op) {
+            .binary_op => |b| try writer.print(
+                "{f}, {f} {f}",
+                .{ b, self.arg1, self.arg2 },
+            ),
+
+            .unary_op => |u| try writer.print(
+                "{f}, {f}",
+                .{ u, self.arg1 },
+            ),
+
+            .label => |l| try writer.print(
+                "Label {}",
+                .{l},
+            ),
+
+            .if_true_goto => {
+                try writer.print(
+                    "GOTO {f} if {f} true",
+                    .{ self.arg2, self.arg1 },
+                );
+            },
+
+            .if_false_goto => {
+                try writer.print(
+                    "GOTO {f} if {f} false",
+                    .{ self.arg2, self.arg1 },
+                );
+            },
+
+            .goto => {
+                try writer.print(
+                    "GOTO {f}",
+                    .{self.arg1},
+                );
+            },
+
+            .assignment => {
+                try writer.print(
+                    "{f} = {f}",
+                    .{ self.arg1, self.arg2 },
+                );
+            },
+
+            .return_something => {
+                try writer.print(
+                    "RET {f}",
+                    .{self.arg1},
+                );
+            },
+
+            .call_fn => {
+                try writer.print(
+                    "CALL {f} ({f} args)",
+                    .{ self.arg1, self.arg2 },
+                );
+            },
+
+            .load_arg => {
+                try writer.print(
+                    "LOAD {f} {f}",
+                    .{ self.arg1, self.arg2 },
+                );
+            },
+        }
+    }
 };
 
 pub const Operator = union(enum) {

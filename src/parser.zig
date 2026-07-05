@@ -294,6 +294,18 @@ pub const Literal = union(LiteralType) {
     int: i64,
     float: f64,
 
+    pub fn format(
+        self: Literal,
+        writer: *std.Io.Writer,
+    ) std.Io.Writer.Error!void {
+        switch (self) {
+            .boolean => |b| try writer.print("{}", .{b}),
+            .uint => |b| try writer.print("{}", .{b}),
+            .int => |b| try writer.print("{}", .{b}),
+            .float => |b| try writer.print("{}", .{b}),
+        }
+    }
+
     /// Compares two literals for which should be
     /// converted to what during a binary operation
     pub fn dominantType(
@@ -386,11 +398,36 @@ pub const BinaryOp = enum {
     gt,
     lt,
     eq,
+
+    pub fn format(
+        self: BinaryOp,
+        writer: *std.Io.Writer,
+    ) !void {
+        switch (self) {
+            .add => try writer.print("ADD", .{}),
+            .sub => try writer.print("SUB", .{}),
+            .mul => try writer.print("MUL", .{}),
+            .div => try writer.print("DIV", .{}),
+            .gt => try writer.print("GT", .{}),
+            .lt => try writer.print("LT", .{}),
+            .eq => try writer.print("EQ", .{}),
+        }
+    }
 };
 
 pub const UnaryOp = enum {
     not,
     neg,
+
+    pub fn format(
+        self: UnaryOp,
+        writer: *std.Io.Writer,
+    ) !void {
+        switch (self) {
+            .not => try writer.print("NOT", .{}),
+            .neg => try writer.print("NEG", .{}),
+        }
+    }
 };
 
 pub const ParserError = error{

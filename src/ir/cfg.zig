@@ -16,7 +16,10 @@ pub const BasicBlock = struct {
         .empty,
     predecessors: std.ArrayList(usize) = .empty,
 
-    pub fn deinit(bb: *BasicBlock, alloc: Allocator) void {
+    pub fn deinit(
+        bb: *BasicBlock,
+        alloc: Allocator,
+    ) void {
         bb.connections.deinit(alloc);
         bb.predecessors.deinit(alloc);
     }
@@ -52,7 +55,8 @@ pub fn fromIr(
     var cfg: CFG = .{};
     if (stream.len == 0) return cfg;
 
-    var leaders = try std.DynamicBitSet.initEmpty(alloc, stream.len);
+    var leaders = try std.DynamicBitSet
+        .initEmpty(alloc, stream.len);
     defer leaders.deinit();
 
     leaders.set(0);
