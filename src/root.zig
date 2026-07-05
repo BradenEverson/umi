@@ -3,7 +3,9 @@
 const std = @import("std");
 const Io = std.Io;
 
-pub const parser = @import("parser.zig");
+pub const Parser = @import("parser.zig");
+pub const VM = @import("vm.zig");
+
 pub const tokenizer = @import("tokenizer.zig");
 pub const compiler = @import("compiler.zig");
 pub const semantic_analysis =
@@ -23,4 +25,5 @@ test {
     _ = @import("semantic_analysis.zig");
     _ = @import("type.zig");
     _ = @import("reg_alloc.zig");
+    _ = @import("vm.zig");
 }

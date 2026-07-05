@@ -3,7 +3,7 @@ const Io = std.Io;
 
 const umi = @import("umi");
 const Token = umi.tokenizer.Token;
-const TopLevel = umi.parser.TopLevel;
+const TopLevel = umi.Parser.TopLevel;
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
@@ -46,7 +46,7 @@ pub fn main(init: std.process.Init) !void {
 
     try tl.initTypes(alloc);
 
-    var parser: umi.parser = .{
+    var parser: umi.Parser = .{
         .tokens = tokens.items,
     };
     try parser.parse(alloc, &tl);
@@ -86,21 +86,25 @@ pub fn main(init: std.process.Init) !void {
     );
     defer cfg.deinit(alloc);
 
-    var t: usize = 0;
+    // var t: usize = 0;
+    // for (cfg.blocks.items) |bb| {
+    //     std.debug.print("{} instructions - {} connections - {} predecessors \n", .{
+    //         bb.instructions.len,
+    //         bb.connections.items.len,
+    //         bb.predecessors.items.len,
+    //     });
+    //     for (bb.instructions) |instruction| {
+    //         std.debug.print("\tt{} - {f}\n", .{
+    //             t,
+    //             instruction,
+    //         });
+    //
+    //         t += 1;
+    //     }
+    // }
 
-    for (cfg.blocks.items) |bb| {
-        std.debug.print("{} instructions - {} connections - {} predecessors \n", .{
-            bb.instructions.len,
-            bb.connections.items.len,
-            bb.predecessors.items.len,
-        });
-        for (bb.instructions) |instruction| {
-            std.debug.print("\tt{} - {f}\n", .{
-                t,
-                instruction,
-            });
+    var vm = umi.VM{ .program = ir };
+    defer vm.deinit(alloc);
 
-            t += 1;
-        }
-    }
+    try vm.exec();
 }
