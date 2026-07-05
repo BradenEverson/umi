@@ -45,7 +45,7 @@ pub const Value = union(enum) {
 pub const VmError = error{NoMain} || Allocator.Error;
 
 registers: std.ArrayList(Value) = .empty,
-variables: std.StringHashMapUnmanaged(Value) = .empty,
+variables: std.StringHashMapUnmanaged(usize) = .empty,
 
 program: ProgramIr,
 
@@ -55,16 +55,29 @@ pub fn deinit(vm: *VM, alloc: Allocator) void {
     for (vm.registers.items) |*item|
         item.deinit(alloc);
     vm.registers.deinit(alloc);
-
-    var iter = vm.variables.valueIterator();
-    while (iter.next()) |item|
-        item.deinit(alloc);
     vm.variables.deinit(alloc);
 }
 
 pub fn exec(vm: *VM) VmError!void {
     if (vm.program.functions.get("main")) |main| {
-        _ = main;
+        for (main.instructions.items) |instruction| switch (instruction.op) {
+            .binary_op => |b| {
+                _ = b;
+            },
+            .unary_op => |u| {
+                _ = u;
+            },
+
+            .if_true_goto => {},
+            .if_false_goto => {},
+            .goto => {},
+            .assignment => {},
+            .return_something => {},
+            .call_fn => {},
+            .load_arg => {},
+
+            .label => {},
+        };
     } else {
         return VmError.NoMain;
     }
