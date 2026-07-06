@@ -2,7 +2,7 @@
 
 *Shigeru Mizuki - Umibozu (1985)*
 
-# umi - A language by me for me
+# umi - A language by me for me :D
 
 I like a lot of languages. I like Rust's type system and pattern matching, I like Zig's philosophy and allocator/IO patterns, I like C's bitwise arithmetic even if it's not as explicit. Umi exists as a culmination of everything I like about everything I've worked in before. It's not a language killer, in fact I think I'll be the only one to ever use it :) Not only this, but it is also my first real attempt at a true full circle language and compiler project. I've done mini compiler components, interpreters, VMs, and hardware descriptions before, but this really is just throwing it all together! 
 
