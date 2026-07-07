@@ -25,16 +25,13 @@ struct Packet {
 }
 
 fn main() -> void {
-    let alloc = std::C_ALLOC;
-
     let bytes: []u8 = {
         0x01,                  // Code: Left 
         0x00, 0x04,            // Len: 4 byte payload following
         0x00, 0x00, 0x00, 0x0F // Some payload
     };
 
-    let packet = Packet::from_bytes(alloc, bytes);
-    defer packet.deinit(alloc);
+    let packet = Packet::from_bytes(bytes);
 }
 ```
 
