@@ -4,214 +4,187 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
-const builtin = @import("builtin");
-
 const parser = @import("parser.zig");
-const TopLevel = parser.TopLevel;
-const Function = parser.Function;
 
 const ir = @import("ir.zig");
 const FunctionIR = ir.FunctionIR;
-const ThreeAddressCode = ir.ThreeAddressCode;
-const Operand = ir.Operand;
 const CFG = ir.ControlFlowGraph;
-const LiveAnalysis = ir.LiveAnalysis;
-const InterferenceGraph = ir.InterferenceGraph;
+const liveness = ir.liveness;
+const VReg = liveness.VReg;
 
 const arch = @import("arch.zig");
+const Reg = arch.Reg;
+
+const layout = @import("layout.zig");
+
+pub const RegAllocError = Allocator.Error;
+
+pub const Location = union(enum) {
+    none,
+    reg: Reg,
+    stack: i32,
+};
 
 pub const StackFrame = struct {
-    /// Holds the stack offset to all local and parameter
-    /// variables
-    variables: std.StringHashMapUnmanaged(usize) = .{},
-    size: usize = 0,
+    saved_size: u64 = 0,
+    size: u64 = 0,
 
-    pub fn deinit(
-        sf: *StackFrame,
-        alloc: Allocator,
-    ) void {
-        sf.variables.deinit(alloc);
+    pub fn allocSlot(sf: *StackFrame, l: layout.Layout) i32 {
+        const total = layout.alignForward(sf.saved_size + sf.size + l.size, l.alignment);
+        sf.size = total - sf.saved_size;
+        return -@as(i32, @intCast(total));
     }
 
-    pub fn init(
-        tl: *TopLevel,
-        alloc: Allocator,
-        ri: *const arch.RegisterInfo,
-        func: *const Function,
-    ) Allocator.Error!StackFrame {
-        var sf: StackFrame = .{};
-        errdefer sf.deinit(alloc);
-
-        _ = tl;
-        _ = ri;
-        _ = func;
-
-        // TODO: Based on the type of the
-        // variable/parameter, need to allocate
-        // more space on the stack for it
-
-        return sf;
+    pub fn subAmount(sf: *const StackFrame) u64 {
+        return layout.alignForward(sf.saved_size + sf.size, 16) - sf.saved_size;
     }
 };
 
 pub const AllocatedFunction = struct {
-    layout: StackFrame = .{},
-};
+    vregs: liveness.VRegs,
+    locs: []Location,
+    frame: StackFrame = .{},
+    callee_saved_used: std.ArrayList(Reg) = .empty,
 
-pub const Color = union(enum) {
-    register: []const u8,
-    spilled,
-};
-
-pub const RegAllocError = Allocator.Error;
-
-pub fn regAlloc(
-    alloc: Allocator,
-    tl: *TopLevel,
-    target: arch.Arch,
-) RegAllocError!std.StringHashMapUnmanaged(AllocatedFunction) {
-    const ri = arch.registerInfo(target);
-    var afs: std.StringHashMapUnmanaged(AllocatedFunction) = .empty;
-    errdefer afs.deinit(alloc);
-
-    var functions = tl.ir.functions.iterator();
-    while (functions.next()) |function| {
-        const allocated = try regAllocFunction(
-            ri,
-            alloc,
-            function.value_ptr,
-        );
-
-        try afs.put(alloc, function.key_ptr.*, allocated);
+    pub fn deinit(af: *AllocatedFunction, alloc: Allocator) void {
+        af.vregs.deinit(alloc);
+        alloc.free(af.locs);
+        af.callee_saved_used.deinit(alloc);
     }
-
-    return afs;
-}
+};
 
 pub fn regAllocFunction(
-    ri: *const arch.RegisterInfo,
     alloc: Allocator,
-    function: *const FunctionIR,
+    ri: *const arch.RegisterInfo,
+    func: *const parser.Function,
+    fir: *const FunctionIR,
 ) RegAllocError!AllocatedFunction {
-    var cfg = try CFG.fromIr(alloc, function.instructions.items);
+    const stream = fir.instructions.items;
+
+    var cfg = try CFG.fromIr(alloc, stream);
     defer cfg.deinit(alloc);
 
-    var live = try LiveAnalysis.analyze(alloc, &cfg);
+    var vregs = try liveness.VRegs.init(alloc, stream, func);
+    errdefer vregs.deinit(alloc);
+
+    var live = try liveness.Liveness.analyze(alloc, &cfg, &vregs);
     defer live.deinit(alloc);
 
-    var igraph = try InterferenceGraph.build(alloc, &cfg, &live);
-    defer igraph.deinit(alloc);
+    var ig = try liveness.InterferenceGraph.build(alloc, &cfg, &vregs, &live);
+    defer ig.deinit(alloc);
 
-    var assignment = try colorGraph(alloc, &igraph, ri);
-    defer assignment.deinit(alloc);
+    const colors = try colorGraph(alloc, &ig, ri);
+    defer alloc.free(colors);
 
-    // TODO: handle spilled stuff as stack slots
+    const locs = try alloc.alloc(Location, vregs.count());
+    errdefer alloc.free(locs);
 
-    return .{};
+    var af: AllocatedFunction = .{ .vregs = vregs, .locs = locs };
+    errdefer af.callee_saved_used.deinit(alloc);
+
+    var used = std.EnumSet(Reg).initEmpty();
+    for (colors) |c| if (c) |r| used.insert(r);
+    for (ri.callee_saved) |r| if (used.contains(r))
+        try af.callee_saved_used.append(alloc, r);
+    af.frame.saved_size = af.callee_saved_used.items.len * ri.word_size;
+
+    const word: layout.Layout = .{ .size = ri.word_size, .alignment = ri.word_size };
+
+    for (locs, 0..) |*loc, v| {
+        if (!ig.present.isSet(v)) {
+            loc.* = .none;
+        } else if (colors[v]) |r| {
+            loc.* = .{ .reg = r };
+        } else {
+            loc.* = .{ .stack = af.frame.allocSlot(word) };
+        }
+    }
+
+    return af;
 }
 
+fn allowedRegs(
+    g: *const liveness.InterferenceGraph,
+    ri: *const arch.RegisterInfo,
+    v: usize,
+) []const Reg {
+    return if (g.crosses_call.isSet(v)) ri.callee_saved else ri.allocatable;
+}
+
+/// Returns a color per VReg
 pub fn colorGraph(
     alloc: Allocator,
-    igraph: *const InterferenceGraph,
+    g: *const liveness.InterferenceGraph,
     ri: *const arch.RegisterInfo,
-) RegAllocError!std.StringHashMapUnmanaged(Color) {
-    const k = ri.general_purpose.len;
-    const n = igraph.nodes.items.len;
+) RegAllocError![]?Reg {
+    const n = g.adj.len;
 
-    var assignment: std.StringHashMapUnmanaged(Color) = .{};
-    errdefer assignment.deinit(alloc);
-
-    if (n == 0) return assignment;
+    const colors = try alloc.alloc(?Reg, n);
+    errdefer alloc.free(colors);
+    @memset(colors, null);
 
     const degree = try alloc.alloc(usize, n);
     defer alloc.free(degree);
-    for (igraph.nodes.items, 0..) |node, i|
-        degree[i] = node.edges.items.len;
 
-    var removed = try std.DynamicBitSet.initEmpty(alloc, n);
-    defer removed.deinit();
+    var removed = try std.DynamicBitSetUnmanaged.initFull(alloc, n);
+    defer removed.deinit(alloc);
 
-    var stack: std.ArrayList(usize) = .empty;
+    var remaining: usize = 0;
+    for (0..n) |v| {
+        if (!g.present.isSet(v)) continue;
+        removed.unset(v);
+        degree[v] = g.adj[v].count();
+        remaining += 1;
+    }
+
+    var stack: std.ArrayList(VReg) = .empty;
     defer stack.deinit(alloc);
 
-    for (0..n) |_| {
+    while (remaining > 0) : (remaining -= 1) {
         var pick: ?usize = null;
-        for (0..n) |i| {
-            if (removed.isSet(i)) continue;
-            if (degree[i] < k) {
-                pick = i;
+        var worst: usize = 0;
+        var worst_deg: usize = 0;
+
+        for (0..n) |v| {
+            if (removed.isSet(v)) continue;
+            if (degree[v] < allowedRegs(g, ri, v).len) {
+                pick = v;
+                break;
+            }
+
+            // TODO: better spill cost
+            if (degree[v] >= worst_deg) {
+                worst = v;
+                worst_deg = degree[v];
+            }
+        }
+
+        const v = pick orelse worst;
+        removed.set(v);
+        try stack.append(alloc, @intCast(v));
+
+        for (g.adj[v].keys()) |nbr| {
+            if (!removed.isSet(nbr)) degree[nbr] -= 1;
+        }
+    }
+
+    var i = stack.items.len;
+    while (i > 0) {
+        i -= 1;
+        const v = stack.items[i];
+
+        var taken = std.EnumSet(Reg).initEmpty();
+        for (g.adj[v].keys()) |nbr| {
+            if (colors[nbr]) |r| taken.insert(r);
+        }
+
+        for (allowedRegs(g, ri, v)) |r| {
+            if (!taken.contains(r)) {
+                colors[v] = r;
                 break;
             }
         }
-
-        if (pick == null) {
-            var best: usize = 0;
-            var best_degree: usize = 0;
-            var found = false;
-
-            for (0..n) |i| {
-                if (removed.isSet(i)) continue;
-                if (!found or degree[i] > best_degree) {
-                    best = i;
-                    best_degree = degree[i];
-                    found = true;
-                }
-            }
-
-            pick = best;
-        }
-
-        const node_idx = pick.?;
-        removed.set(node_idx);
-        try stack.append(alloc, node_idx);
-
-        for (igraph.nodes.items[node_idx].edges.items) |nbr|
-            if (!removed.isSet(nbr)) {
-                degree[nbr] -= 1;
-            };
     }
 
-    const colors = try alloc.alloc(?Color, n);
-    defer alloc.free(colors);
-    @memset(colors, null);
-
-    const used = try alloc.alloc(bool, k);
-    defer alloc.free(used);
-
-    var idx = stack.items.len;
-    while (idx > 0) {
-        idx -= 1;
-        const node_idx = stack.items[idx];
-
-        @memset(used, false);
-        for (igraph.nodes.items[node_idx].edges.items) |nbr| {
-            const c = colors[nbr] orelse continue;
-            if (c != .register) continue;
-
-            for (ri.general_purpose, 0..) |reg, ci| {
-                if (std.mem.eql(u8, reg, c.register)) {
-                    used[ci] = true;
-                    break;
-                }
-            }
-        }
-
-        var chosen: ?Color = null;
-        for (ri.general_purpose, 0..) |reg, ci| {
-            if (!used[ci]) {
-                chosen = .{ .register = reg };
-                break;
-            }
-        }
-
-        colors[node_idx] = chosen orelse .spilled;
-    }
-
-    for (igraph.nodes.items, 0..) |node, i| {
-        // TODO: References need to be implemented too
-        if (node.val != .variable) continue;
-        try assignment.put(alloc, node.val.variable, colors[i].?);
-    }
-
-    return assignment;
+    return colors;
 }

@@ -103,8 +103,8 @@ pub fn main(init: std.process.Init) !void {
     //     }
     // }
 
-    var vm = umi.VM{ .program = ir };
-    defer vm.deinit(alloc);
-
-    try vm.exec();
+    var aw: std.Io.Writer.Allocating = .init(alloc);
+    defer aw.deinit();
+    try umi.arch.x86_64.emitProgram(alloc, &aw.writer, &tl, .x86_64);
+    std.debug.print("{s}", .{aw.written()});
 }
