@@ -89,6 +89,8 @@ pub const TopLevel = struct {
     ir: ProgramIR = .{},
 
     pub fn getType(tl: *TopLevel, ty: []const u8) ?Type {
+        if (ty.len == 0) return null;
+
         switch (ty[0]) {
             'i', 'u' => {
                 // Check for if it's a valid int
@@ -97,7 +99,7 @@ pub const TopLevel = struct {
                     u16,
                     bits_str,
                     10,
-                ) catch return null;
+                ) catch return tl.types.get(ty);
 
                 return .{ .its_an_int = .{
                     .signed = if (ty[0] == 'u')
@@ -115,7 +117,7 @@ pub const TopLevel = struct {
                     u16,
                     bits_str,
                     10,
-                ) catch return null;
+                ) catch return tl.types.get(ty);
 
                 return switch (bits) {
                     16 => .{ .its_a_float = .float16 },

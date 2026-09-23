@@ -5,6 +5,7 @@ const Io = std.Io;
 
 pub const Parser = @import("parser.zig");
 pub const VM = @import("vm.zig");
+pub const arch = @import("arch.zig");
 
 pub const tokenizer = @import("tokenizer.zig");
 pub const compiler = @import("compiler.zig");
@@ -14,6 +15,7 @@ pub const types = @import("type.zig");
 pub const optimizer = @import("optimizer.zig");
 pub const ir_gen = @import("ir.zig");
 pub const reg_alloc = @import("reg_alloc.zig");
+pub const layout = @import("layout.zig");
 
 test {
     _ = @import("arch.zig");
@@ -25,5 +27,6 @@ test {
     _ = @import("semantic_analysis.zig");
     _ = @import("type.zig");
     _ = @import("reg_alloc.zig");
+    _ = @import("layout.zig");
     _ = @import("vm.zig");
 }

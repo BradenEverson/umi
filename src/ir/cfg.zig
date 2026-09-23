@@ -9,6 +9,7 @@ const TAC = ir.ThreeAddressCode;
 pub const BasicBlock = struct {
     /// A slice into the existing TAC stream
     instructions: []TAC = &[0]TAC{},
+    start: usize = 0,
 
     // todo: Might need connection type too
     // like conditional etc
@@ -89,6 +90,7 @@ pub fn fromIr(
             const block_idx = cfg.blocks.items.len;
             try cfg.blocks.append(alloc, .{
                 .instructions = stream[block_start..i],
+                .start = block_start,
             });
 
             const first = stream[block_start];

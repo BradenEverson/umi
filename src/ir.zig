@@ -11,6 +11,7 @@ const BinaryOp = parser.BinaryOp;
 const UnaryOp = parser.UnaryOp;
 
 pub const ControlFlowGraph = @import("ir/cfg.zig");
+pub const liveness = @import("ir/liveness.zig");
 
 const Type = @import("type.zig").Type;
 
@@ -302,10 +303,7 @@ pub fn exprToIr(
                 .arg2 = val,
             };
             try function.instructions.append(alloc, code);
-            return Operand{
-                .reference = function.instructions
-                    .items.len - 1,
-            };
+            return Operand{ .variable = a.name };
         },
         .construction => |c| {
             const val = try exprToIr(
@@ -321,23 +319,19 @@ pub fn exprToIr(
                 .arg2 = val,
             };
             try function.instructions.append(alloc, code);
-            return Operand{
-                .reference = function.instructions
-                    .items.len - 1,
-            };
+            return Operand{ .variable = c.name };
         },
         .variable => |v| return Operand{ .variable = v },
         .literal => |l| return Operand{ .literal = l },
 
         .fn_call => |f| {
-            for (f.arguments.items, 0..) |arg, i| {
-                const val = try exprToIr(
-                    alloc,
-                    arg,
-                    tl,
-                    function,
-                );
+            const vals = try alloc.alloc(Operand, f.arguments.items.len);
+            defer alloc.free(vals);
 
+            for (f.arguments.items, vals) |arg, *val|
+                val.* = try exprToIr(alloc, arg, tl, function);
+
+            for (vals, 0..) |val, i| {
                 const load_arg = ThreeAddressCode{
                     .op = .load_arg,
                     .arg1 = .{ .int = i },
@@ -465,4 +459,5 @@ pub fn exprToIr(
 
 test {
     _ = @import("ir/cfg.zig");
+    _ = @import("ir/liveness.zig");
 }
