@@ -38,5 +38,3 @@ fn main() -> void {
 I want this language for my specific low level projects I like to work on. These frequently require the construction of structs from a sequence of bytes. Hence this whole idea.
 
 Essentially, every single struct and primative type define this `from_bytes` function. Slices of types define from bytes as first reading a u16 len, followed by calling `from_bytes` for `len` of the subtype. Pretty cool :)
-
-Of course these require allocations, which borrows heavily from Zig's allocator design
