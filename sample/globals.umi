@@ -1,0 +1,6 @@
+
+let foo: u32 = 10;
+
+fn main() -> void {
+    let bar: u32 = foo + foo;
+}

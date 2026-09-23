@@ -82,6 +82,7 @@ pub const Function = struct {
 };
 
 pub const TopLevel = struct {
+    globals: std.StringHashMapUnmanaged(Expr) = .empty,
     types: std.StringHashMapUnmanaged(Type) = .empty,
     functions: std.StringHashMapUnmanaged(Function) =
         .empty,
@@ -147,6 +148,11 @@ pub const TopLevel = struct {
         while (fns.next()) |f| f.deinit(alloc);
 
         tl.functions.deinit(alloc);
+
+        var globals = tl.globals.valueIterator();
+        while (globals.next()) |g| g.deinit(alloc);
+
+        tl.globals.deinit(alloc);
         tl.ir.deinit(alloc);
     }
 };
@@ -527,6 +533,9 @@ pub fn parse(
             .get(top_level_token_ident.data).?;
 
         switch (kw) {
+            .let => {
+                // global variable
+            },
             .struct_kw => {
                 var struct_def: StructDef = .{};
                 errdefer struct_def.deinit(alloc);
