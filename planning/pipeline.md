@@ -1,18 +1,15 @@
-This is my high level pipeline idea for how umi code will be compiled. Still need to decide if we need an IR or not, or if going straight from toplevel to bytecode can be an acceptable IR :)
+This is my high level pipeline idea for how umi code will be compiled.
 
 
 ```
 [Source code: []u8] -> [tokenizer: []token] -> [parser: TopLevel] -> [optimizer: TopLevel]
-                                                                            ||
-                                                                            \/
-                                                                 [IR translator: TAC ]
-                                                                            ||
-                                                                            \/
-                                                           [Register Allocator: TAC w/ Context]
-                                                                            ||
-                                                                            \/
-                                                          [bytecode compiler: cpool + bytecode]
-                                                           ||                               ||
-                                                           \/                               \/
-                                                   {virtual machine}                  {machine code}
+                                                                               ||
+                                                                               \/
+                                                                     [IR translator: TAC ]
+                                                                               ||
+                                                                               \/
+                                                               [Register Allocator: TAC w/ Context]
+                                                                   ||                        ||
+                                                                   \/                        \/
+                                                           {virtual machine}           {machine code}
 ```
