@@ -156,6 +156,7 @@ pub const Expr = union(enum) {
         name: []const u8,
         val: *Expr,
     },
+    // include: []const u8,
     construction: struct {
         name: []const u8,
         mutable: bool,
@@ -819,6 +820,10 @@ pub fn expression(
             },
         };
         return assignment_expr;
+    } else if (self.peek() == .keyword and
+        self.peekTok().kw().? == .include)
+    {
+        @panic("TODO! INCLUDE");
     }
 
     return self.term(alloc);
