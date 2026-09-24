@@ -283,9 +283,22 @@ pub fn typeCheck(tl: *TopLevel) TypeCheckError!void {
             try typeCheckExpr(tl, &function.scope, ret_type, expr);
     }
 
-    var globals = tl.globals.iterator();
+    var global_consts = tl.global_consts.iterator();
 
-    while (globals.next()) |entry| {
+    while (global_consts.next()) |entry| {
+        const key = entry.key_ptr.*;
+        const val = entry.value_ptr.*;
+
+        const ty = try exprEvalsTo(tl, &tl.global_scope, val);
+
+        const ty_name = tl.global_scope.getVariable(key).?.ty;
+
+        _ = try ty.agreesWith(tl.getType(ty_name).?);
+    }
+
+    var global_vars = tl.global_variables.iterator();
+
+    while (global_vars.next()) |entry| {
         const key = entry.key_ptr.*;
         const val = entry.value_ptr.*;
 

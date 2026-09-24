@@ -82,12 +82,18 @@ pub const Function = struct {
 };
 
 pub const TopLevel = struct {
-    globals: std.StringHashMapUnmanaged(*Expr) = .empty,
+    global_consts: std.StringHashMapUnmanaged(*Expr) = .empty,
+    global_variables: std.StringHashMapUnmanaged(*Expr) = .empty,
+
     types: std.StringHashMapUnmanaged(Type) = .empty,
     functions: std.StringHashMapUnmanaged(Function) =
         .empty,
     global_scope: Scope = .{},
     ir: ProgramIR = .{},
+
+    pub fn isGlobal(tl: *const TopLevel, variable: []const u8) bool {
+        return tl.global_scope.variableExists(variable);
+    }
 
     pub fn getType(tl: *TopLevel, ty: []const u8) ?Type {
         if (ty.len == 0) return null;
@@ -149,13 +155,20 @@ pub const TopLevel = struct {
 
         tl.functions.deinit(alloc);
 
-        var globals = tl.globals.valueIterator();
+        var globals = tl.global_consts.valueIterator();
         while (globals.next()) |g| {
             g.*.deinit(alloc);
             alloc.destroy(g.*);
         }
 
-        tl.globals.deinit(alloc);
+        var vlobals = tl.global_variables.valueIterator();
+        while (vlobals.next()) |g| {
+            g.*.deinit(alloc);
+            alloc.destroy(g.*);
+        }
+
+        tl.global_consts.deinit(alloc);
+        tl.global_variables.deinit(alloc);
         tl.global_scope.deinit(alloc);
         tl.ir.deinit(alloc);
     }
@@ -537,7 +550,12 @@ pub fn parse(
             .let => {
                 const assignment = try self.construction(alloc);
 
-                try tl.globals.put(
+                const put_in = if (assignment.construction.mutable)
+                    &tl.global_variables
+                else
+                    &tl.global_consts;
+
+                try put_in.put(
                     alloc,
                     assignment.construction.name,
                     assignment.construction.val,

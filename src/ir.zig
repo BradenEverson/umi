@@ -324,7 +324,12 @@ pub fn exprToIr(
             try function.instructions.append(alloc, code);
             return Operand{ .variable = c.name };
         },
-        .variable => |v| return Operand{ .variable = v },
+        .variable => |v| {
+            if (tl.isGlobal(v)) {
+                std.debug.print("GLOBAL GLOBAL GLOBAL\n", .{});
+            }
+            return Operand{ .variable = v };
+        },
         .literal => |l| return Operand{ .literal = l },
 
         .fn_call => |f| {
