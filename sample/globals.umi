@@ -1,8 +1,7 @@
 
 let foo: u32 = 10;
-
-fn oiasdjfh(foo: u8) -> void {}
+let mut bax: u32 = 1;
 
 fn main() -> void {
-    oiasdjfh(1);
+    bax = bax + foo + foo;
 }
