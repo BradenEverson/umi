@@ -82,7 +82,7 @@ pub const Function = struct {
 };
 
 pub const TopLevel = struct {
-    globals: std.StringHashMapUnmanaged(Expr) = .empty,
+    globals: std.StringHashMapUnmanaged(*Expr) = .empty,
     types: std.StringHashMapUnmanaged(Type) = .empty,
     functions: std.StringHashMapUnmanaged(Function) =
         .empty,
@@ -150,9 +150,13 @@ pub const TopLevel = struct {
         tl.functions.deinit(alloc);
 
         var globals = tl.globals.valueIterator();
-        while (globals.next()) |g| g.deinit(alloc);
+        while (globals.next()) |g| {
+            g.*.deinit(alloc);
+            alloc.destroy(g.*);
+        }
 
         tl.globals.deinit(alloc);
+        tl.global_scope.deinit(alloc);
         tl.ir.deinit(alloc);
     }
 };
@@ -162,7 +166,6 @@ pub const Expr = union(enum) {
         name: []const u8,
         val: *Expr,
     },
-    // include: []const u8,
     construction: struct {
         name: []const u8,
         mutable: bool,
@@ -527,16 +530,31 @@ pub fn parse(
         const top_level_token_ident =
             self.peekTok();
 
-        try self.consume(.keyword);
-
         const kw = tokenizer.KeywordLookup
             .get(top_level_token_ident.data).?;
 
         switch (kw) {
             .let => {
-                // global variable
+                const assignment = try self.construction(alloc);
+
+                try tl.globals.put(
+                    alloc,
+                    assignment.construction.name,
+                    assignment.construction.val,
+                );
+                try tl.global_scope.variables.put(
+                    alloc,
+                    assignment.construction.name,
+                    .{
+                        .mutable = assignment.construction.mutable,
+                        .ty = assignment.construction.ty,
+                    },
+                );
+
+                alloc.destroy(assignment);
             },
             .struct_kw => {
+                try self.consume(.keyword);
                 var struct_def: StructDef = .{};
                 errdefer struct_def.deinit(alloc);
 
@@ -577,6 +595,7 @@ pub fn parse(
                 );
             },
             .fn_kw => {
+                try self.consume(.keyword);
                 var func: Function = .{
                     .scope = .{
                         .parent = &tl.global_scope,
@@ -646,6 +665,53 @@ pub fn parse(
                 .InvalidTopLevelStart,
         }
     }
+}
+
+pub fn construction(
+    self: *Parser,
+    alloc: Allocator,
+) AnyParserError!*Expr {
+    try self.consume(.keyword);
+    // next token is either mut if
+    // variable is mutable, or ident
+    // for var name
+
+    var name = self.peekTok().data;
+    var mutable = false;
+
+    if (self.peek() == .keyword and
+        self.peekTok().kw().? == .mut)
+    {
+        mutable = true;
+        try self.consume(.keyword);
+        name = self.peekTok().data;
+    }
+
+    try self.consume(.ident);
+    try self.consume(.colon);
+
+    const ty = self.peekTok().data;
+    try self.consume(.ident);
+
+    try self.consume(.equals);
+    const value = try self.term(alloc);
+    errdefer value.deinit(alloc);
+
+    try self.consume(.semicolon);
+
+    const constr = try alloc
+        .create(Expr);
+
+    constr.* = .{
+        .construction = .{
+            .mutable = mutable,
+            .name = name,
+            .ty = ty,
+            .val = value,
+        },
+    };
+
+    return constr;
 }
 
 pub fn statement(
@@ -729,49 +795,7 @@ pub fn statement(
                 return loop;
             },
 
-            .let => {
-                try self.consume(.keyword);
-                // next token is either mut if
-                // variable is mutable, or ident
-                // for var name
-
-                var name = self.peekTok().data;
-                var mutable = false;
-
-                if (self.peek() == .keyword and
-                    self.peekTok().kw().? == .mut)
-                {
-                    mutable = true;
-                    try self.consume(.keyword);
-                    name = self.peekTok().data;
-                }
-
-                try self.consume(.ident);
-                try self.consume(.colon);
-
-                const ty = self.peekTok().data;
-                try self.consume(.ident);
-
-                try self.consume(.equals);
-                const value = try self.term(alloc);
-                errdefer value.deinit(alloc);
-
-                try self.consume(.semicolon);
-
-                const construction = try alloc
-                    .create(Expr);
-
-                construction.* = .{
-                    .construction = .{
-                        .mutable = mutable,
-                        .name = name,
-                        .ty = ty,
-                        .val = value,
-                    },
-                };
-
-                return construction;
-            },
+            .let => return self.construction(alloc),
 
             else => {
                 const expr = try self
