@@ -8,7 +8,6 @@ pub const VM = @import("vm.zig");
 pub const arch = @import("arch.zig");
 
 pub const tokenizer = @import("tokenizer.zig");
-pub const compiler = @import("compiler.zig");
 pub const semantic_analysis =
     @import("semantic_analysis.zig");
 pub const types = @import("type.zig");
@@ -19,7 +18,6 @@ pub const layout = @import("layout.zig");
 
 test {
     _ = @import("arch.zig");
-    _ = @import("compiler.zig");
     _ = @import("ir.zig");
     _ = @import("optimizer.zig");
     _ = @import("parser.zig");

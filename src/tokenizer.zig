@@ -21,6 +21,7 @@ pub const Keyword = enum {
     while_kw,
     true_kw,
     false_kw,
+    include,
 };
 
 pub const KeywordLookup =
@@ -38,6 +39,7 @@ pub const KeywordLookup =
         .{ "return", .return_kw },
         .{ "true", .true_kw },
         .{ "false", .false_kw },
+        .{ "include", .include },
     });
 
 pub const TokenTag = enum {

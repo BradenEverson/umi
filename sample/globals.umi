@@ -1,0 +1,7 @@
+
+let foo: u32 = 10;
+let mut bax: u32 = 1;
+
+fn main() -> void {
+    bax = bax + foo + foo;
+}

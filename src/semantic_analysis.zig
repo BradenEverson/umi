@@ -47,6 +47,10 @@ pub fn nameResolution(
                 return SemanticAnalysisError
                     .TypeDoesNotExist;
 
+            if (tl.global_scope.getVariable(param.@"0")) |_|
+                return SemanticAnalysisError
+                    .VariableAlreadyDefined;
+
             try function.scope.variables.put(
                 alloc,
                 param.@"0",
@@ -281,6 +285,32 @@ pub fn typeCheck(tl: *TopLevel) TypeCheckError!void {
         const ret_type = tl.getType(function.returns).?;
         for (function.body.ast.items) |expr|
             try typeCheckExpr(tl, &function.scope, ret_type, expr);
+    }
+
+    var global_consts = tl.global_consts.iterator();
+
+    while (global_consts.next()) |entry| {
+        const key = entry.key_ptr.*;
+        const val = entry.value_ptr.*;
+
+        const ty = try exprEvalsTo(tl, &tl.global_scope, val);
+
+        const ty_name = tl.global_scope.getVariable(key).?.ty;
+
+        _ = try ty.agreesWith(tl.getType(ty_name).?);
+    }
+
+    var global_vars = tl.global_variables.iterator();
+
+    while (global_vars.next()) |entry| {
+        const key = entry.key_ptr.*;
+        const val = entry.value_ptr.*;
+
+        const ty = try exprEvalsTo(tl, &tl.global_scope, val);
+
+        const ty_name = tl.global_scope.getVariable(key).?.ty;
+
+        _ = try ty.agreesWith(tl.getType(ty_name).?);
     }
 }
 

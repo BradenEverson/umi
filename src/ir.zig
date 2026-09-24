@@ -30,6 +30,7 @@ pub const Operand = union(enum) {
     reference: Temp,
     literal: Literal,
     variable: []const u8,
+    global: []const u8,
     fn_name: []const u8,
     int: usize,
     unused,
@@ -49,6 +50,10 @@ pub const Operand = union(enum) {
 
             .variable, .fn_name => |s| {
                 try writer.print("{s}", .{s});
+            },
+
+            .global => |s| {
+                try writer.print("{s}#g", .{s});
             },
 
             .int => |i| {
@@ -177,6 +182,9 @@ pub const Operator = union(enum) {
 
     call_fn,
     load_arg,
+
+    // load_global,
+    // store_global,
 };
 
 pub const FunctionIR = struct {
@@ -297,13 +305,20 @@ pub fn exprToIr(
                 function,
             );
 
-            const code: ThreeAddressCode = .{
+            var code: ThreeAddressCode = .{
                 .op = .assignment,
                 .arg1 = .{ .variable = a.name },
                 .arg2 = val,
             };
-            try function.instructions.append(alloc, code);
-            return Operand{ .variable = a.name };
+
+            if (tl.isGlobal(a.name)) {
+                code.arg1 = .{ .global = a.name };
+                try function.instructions.append(alloc, code);
+                return Operand{ .global = a.name };
+            } else {
+                try function.instructions.append(alloc, code);
+                return Operand{ .variable = a.name };
+            }
         },
         .construction => |c| {
             const val = try exprToIr(
@@ -321,7 +336,13 @@ pub fn exprToIr(
             try function.instructions.append(alloc, code);
             return Operand{ .variable = c.name };
         },
-        .variable => |v| return Operand{ .variable = v },
+        .variable => |v| {
+            if (tl.isGlobal(v)) {
+                return Operand{ .global = v };
+            } else {
+                return Operand{ .variable = v };
+            }
+        },
         .literal => |l| return Operand{ .literal = l },
 
         .fn_call => |f| {

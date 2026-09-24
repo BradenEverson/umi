@@ -20,13 +20,47 @@ pub const CodegenError = Allocator.Error || Writer.Error || error{
     UnsupportedOperand,
     TooManyArguments,
     UnallocatedValue,
+    NonConstantInitializer,
 };
+
+fn evalConstExpr(e: *parser.Expr) CodegenError!i64 {
+    return switch (e.*) {
+        .literal => |l| switch (l) {
+            .boolean => |b| @intFromBool(b),
+            .int => |i| i,
+            .uint => |u| @bitCast(u),
+            .float => error.UnsupportedOperand,
+        },
+        .unary_op => |u| blk: {
+            const v = try evalConstExpr(u.expr);
+            break :blk switch (u.op) {
+                .neg => -v,
+                .not => @intFromBool(v == 0),
+            };
+        },
+        .binary_op => |b| blk: {
+            const l = try evalConstExpr(b.left);
+            const r = try evalConstExpr(b.right);
+            break :blk switch (b.op) {
+                .add => l +% r,
+                .sub => l -% r,
+                .mul => l *% r,
+                .div => @divTrunc(l, r),
+                .lt => @intFromBool(l < r),
+                .gt => @intFromBool(l > r),
+                .eq => @intFromBool(l == r),
+            };
+        },
+        else => error.NonConstantInitializer,
+    };
+}
 
 /// A machine operand
 const Opnd = union(enum) {
     reg: Reg,
     mem: i32,
     imm: i64,
+    global: []const u8,
 
     pub fn format(o: Opnd, w: *Writer) Writer.Error!void {
         switch (o) {
@@ -35,6 +69,7 @@ const Opnd = union(enum) {
                 "qword ptr [rbp {s} {d}]",
                 .{ if (off < 0) "-" else "+", @abs(off) },
             ),
+            .global => |s| try w.print("qword ptr [rip + {s}]", .{s}),
             .imm => |i| try w.print("{d}", .{i}),
         }
     }
@@ -45,6 +80,10 @@ const Opnd = union(enum) {
 
     fn isReg(o: Opnd, r: Reg) bool {
         return o == .reg and o.reg == r;
+    }
+
+    fn isMem(o: Opnd) bool {
+        return o == .mem or o == .global;
     }
 };
 
@@ -69,6 +108,7 @@ const Gen = struct {
                 .uint => |u| @bitCast(u),
                 .float => return error.UnsupportedOperand,
             } },
+            .global => |name| return .{ .global = name },
             .reference, .variable => {
                 const v = g.af.vregs.of(op).?;
                 return switch (g.af.locs[v]) {
@@ -91,8 +131,8 @@ const Gen = struct {
 
     fn move(g: *Gen, to: Opnd, from: Opnd) Writer.Error!void {
         if (std.meta.eql(to, from)) return;
-        const via_r11 = to == .mem and
-            (from == .mem or (from == .imm and !from.fitsImm32()));
+        const via_r11 = to.isMem() and
+            (from.isMem() or (from == .imm and !from.fitsImm32()));
         if (via_r11) {
             try g.ins("mov r11, {f}", .{from});
             try g.ins("mov {f}, r11", .{to});
@@ -195,8 +235,12 @@ const Gen = struct {
             .unary_op => |op| try g.unary(op, g.dst(idx), try g.loc(tac.arg1)),
 
             .assignment => {
-                const v = g.af.vregs.of(tac.arg1).?;
-                if (g.dst(v)) |d| try g.move(d, try g.loc(tac.arg2));
+                if (tac.arg1 == .global) {
+                    try g.move(.{ .global = tac.arg1.global }, try g.loc(tac.arg2));
+                } else {
+                    const v = g.af.vregs.of(tac.arg1).?;
+                    if (g.dst(v)) |d| try g.move(d, try g.loc(tac.arg2));
+                }
             },
 
             .load_arg => {
@@ -229,6 +273,24 @@ const Gen = struct {
         }
     }
 };
+
+fn emitGlobals(w: *Writer, tl: *TopLevel) CodegenError!void {
+    var consts = tl.global_consts.iterator();
+    while (consts.next()) |entry| {
+        const val = try evalConstExpr(entry.value_ptr.*);
+        try w.print(".section .rodata\n.p2align 3\n{s}:\n    .quad {d}\n", .{ entry.key_ptr.*, val });
+    }
+
+    var vars = tl.global_variables.iterator();
+    while (vars.next()) |entry| {
+        const val = try evalConstExpr(entry.value_ptr.*);
+        if (val == 0) {
+            try w.print(".bss\n.p2align 3\n{s}:\n    .zero 8\n", .{entry.key_ptr.*});
+        } else {
+            try w.print(".data\n.p2align 3\n{s}:\n    .quad {d}\n", .{ entry.key_ptr.*, val });
+        }
+    }
+}
 
 pub fn emitFunction(
     alloc: Allocator,
@@ -285,7 +347,9 @@ pub fn emitProgram(
 ) CodegenError!void {
     const ri = arch.registerInfo(target);
 
-    try w.writeAll(".intel_syntax noprefix\n.text\n");
+    try w.writeAll(".intel_syntax noprefix\n");
+    try emitGlobals(w, tl);
+    try w.writeAll(".text\n");
 
     var it = tl.ir.functions.iterator();
     while (it.next()) |entry| {

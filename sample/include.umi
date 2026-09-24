@@ -1,0 +1,7 @@
+//! How to import umi code and modules!
+
+let foo = include("foo.umi");
+
+fn main() -> void {
+    foo.bar();
+}
