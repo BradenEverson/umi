@@ -47,6 +47,10 @@ pub fn nameResolution(
                 return SemanticAnalysisError
                     .TypeDoesNotExist;
 
+            if (tl.global_scope.getVariable(param.@"0")) |_|
+                return SemanticAnalysisError
+                    .VariableAlreadyDefined;
+
             try function.scope.variables.put(
                 alloc,
                 param.@"0",
