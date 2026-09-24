@@ -1,0 +1,15 @@
+fn foo(times: u32) -> void {
+    let mut not_done: bool = true;
+    let mut counter: u32 = 0;
+
+    while (not_done) {
+        counter = counter + 1;
+        if (counter == times) {
+            not_done = false;
+        }
+    }
+}
+
+fn main() -> void {
+    foo(10);
+}
