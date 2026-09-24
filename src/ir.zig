@@ -177,6 +177,9 @@ pub const Operator = union(enum) {
 
     call_fn,
     load_arg,
+
+    // load_global,
+    // store_global,
 };
 
 pub const FunctionIR = struct {

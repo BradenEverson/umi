@@ -86,22 +86,22 @@ pub fn main(init: std.process.Init) !void {
     );
     defer cfg.deinit(alloc);
 
-    // var t: usize = 0;
-    // for (cfg.blocks.items) |bb| {
-    //     std.debug.print("{} instructions - {} connections - {} predecessors \n", .{
-    //         bb.instructions.len,
-    //         bb.connections.items.len,
-    //         bb.predecessors.items.len,
-    //     });
-    //     for (bb.instructions) |instruction| {
-    //         std.debug.print("\tt{} - {f}\n", .{
-    //             t,
-    //             instruction,
-    //         });
-    //
-    //         t += 1;
-    //     }
-    // }
+    var t: usize = 0;
+    for (cfg.blocks.items) |bb| {
+        std.debug.print("{} instructions - {} connections - {} predecessors \n", .{
+            bb.instructions.len,
+            bb.connections.items.len,
+            bb.predecessors.items.len,
+        });
+        for (bb.instructions) |instruction| {
+            std.debug.print("\tt{} - {f}\n", .{
+                t,
+                instruction,
+            });
+
+            t += 1;
+        }
+    }
 
     var aw: std.Io.Writer.Allocating = .init(alloc);
     defer aw.deinit();
